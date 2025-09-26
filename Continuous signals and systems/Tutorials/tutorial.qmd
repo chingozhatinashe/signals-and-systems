@@ -1,0 +1,7 @@
+---
+title: "University of Example : School of Engineering : Signals and Systems"
+author: Dr T. Chingozha
+format: 
+    pdf:
+        include-in-header: "../templates/titlepage.tex"
+---

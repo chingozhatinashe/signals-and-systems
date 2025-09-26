@@ -1,0 +1,44 @@
+% ==============================
+% Custom Academic Title Page
+% ==============================
+\usepackage{graphicx}
+\usepackage{titling}
+\usepackage{titlesec}
+
+% Redefine maketitle to create custom layout
+\pretitle{%
+  \begin{titlepage}
+  % Logo on the left
+  \begin{flushleft}
+    \includegraphics[width=3cm]{logo.png}
+  \end{flushleft}
+  \vspace{-3cm} % shifts title up to align with logo
+  \begin{center}
+    \Huge\bfseries
+}
+\posttitle{%
+    \end{center}
+    \vspace{1cm}
+    \rule{\textwidth}{0.5pt} \\[0.5cm] % top horizontal line
+    \begin{center}
+      \LARGE \theauthor \\[0.3cm]
+      \large \thedate
+    \end{center}
+    \rule{\textwidth}{0.5pt} % bottom horizontal line
+    \vfill
+    \end{titlepage}
+}
+
+% Format for the University : School : Course
+\renewcommand{\maketitlehooka}{%
+  \vspace{1cm}
+  {\Large \textbf{\thetitle}}
+}
+
+% Section header style: surrounded by horizontal lines
+\titleformat{\section}
+  {\normalfont\Large\bfseries\centering}
+  {}
+  {0pt}
+  {}
+  [\vspace{0.5em}\rule{\textwidth}{0.5pt}]
