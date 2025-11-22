@@ -2,6 +2,7 @@
 #import "@preview/showybox:2.0.4": showybox
 #import "@preview/cetz:0.3.2"
 #import "@preview/cetz-plot:0.1.1"
+#import "@preview/fletcher:0.5.8" as fletcher: diagram, edge, node
 
 
 #set text(lang: "en")
@@ -168,7 +169,55 @@ which encompases a large variety of signals.
 1. Case when $s = 0$
 $x(t) = 1$ i.e. models constant signals.
 
-2. Case when $s$ is pure real i.e. $omega = 0$.
+2. Case when $s$ is pure real i.e. $omega = 0, x(t) = e^(sigma t)$.
+
+#cetz.canvas({
+  import cetz.draw: *
+  import cetz-plot: *
+
+  cetz.draw.set-style(axes: (
+    y: (label: (anchor: "south-east", offset: -0.2), mark: (end: "stealth", fill: black)),
+    x: (label: (anchor: "north", offset: 0.1), mark: (end: "stealth", fill: black)),
+  ))
+
+  plot.plot(
+    size: (5, 5),
+    x-tick-step: 1,
+    y-tick-step: 1,
+    y-min: 0,
+    y-max: 2,
+    y-label: "x(t)",
+    x-min: -1,
+    x-max: 1,
+    axis-style: "left",
+    legend: "inner-north-west",
+    x-label: "t",
+    {
+      plot.add(domain: (-1, 1), t => (t, calc.exp(t)), label: $sigma > 0$)
+    },
+  )
+
+  cetz.draw.translate((8, 0))
+
+  plot.plot(
+    size: (5, 5),
+    x-tick-step: 1,
+    y-tick-step: 1,
+    y-min: 0,
+    y-max: 2,
+    y-label: "x(t)",
+    x-min: -1,
+    x-max: 1,
+    axis-style: "left",
+    legend: "inner-north-west",
+    x-label: "t",
+    {
+      plot.add(domain: (-1, 1), t => (t, calc.exp(-t)), label: $sigma < 0$)
+    },
+  )
+})
+
+3. Case when $s$ is pure imaginary i.e $sigma = 0, x(t) = e^(j omega t)$.
 
 #cetz.canvas({
   import cetz.draw: *
@@ -178,15 +227,101 @@ $x(t) = 1$ i.e. models constant signals.
     size: (5, 5),
     x-tick-step: 1,
     y-tick-step: 1,
-    y-min: 0,
-    y-max: 2,
+    y-min: -1.5,
+    y-max: 1.5,
+    y-label: "x(t)",
     x-min: -1,
     x-max: 1,
+    axis-style: "left",
+    legend: "inner-north-west",
+    x-label: "t",
     {
-      plot.add(domain: (-1, 1), t => (t, calc.exp(t)))
+      plot.add(domain: (-1, 1), t => (t, calc.cos(2 * calc.pi * t)))
     },
   )
 })
+
+4. Case when $s$ is complex i.e $x(t) = e^((sigma + j omega)t) = e^(sigma t)e^(j omega t)$.
+#cetz.canvas({
+  import cetz.draw: *
+  import cetz-plot: *
+
+
+  plot.plot(
+    size: (5, 5),
+    x-tick-step: 1,
+    y-tick-step: 1,
+    y-min: -2,
+    y-max: 2,
+    y-label: "x(t)",
+    x-min: -1,
+    x-max: 1,
+    axis-style: "left",
+    legend: "inner-north-west",
+    x-label: "t",
+    {
+      plot.add(domain: (-1, 1), t => (t, calc.exp(0.8 * t) * calc.cos(2 * calc.pi * t)), label: $sigma > 0$)
+
+      plot.add(style: (stroke: (dash: "dashed")), domain: (-1, 1), t => (t, calc.exp(0.8 * t)))
+
+      plot.add(style: (stroke: (dash: "dashed")), domain: (-1, 1), t => (t, -calc.exp(0.8 * t)))
+    },
+  )
+
+  cetz.draw.translate((8, 0))
+
+  plot.plot(
+    size: (5, 5),
+    x-tick-step: 1,
+    y-tick-step: 1,
+    y-min: -2,
+    y-max: 2,
+    y-label: "x(t)",
+    x-min: -1,
+    x-max: 1,
+    axis-style: "left",
+    legend: "inner-north-west",
+    x-label: "t",
+    {
+      plot.add(domain: (-1, 1), t => (t, calc.exp(-0.8 * t) * calc.cos(2 * calc.pi * t)), label: $sigma < 0$)
+
+      plot.add(style: (stroke: (dash: "dashed")), domain: (-1, 1), t => (t, calc.exp(-0.8 * t)))
+
+      plot.add(style: (stroke: (dash: "dashed")), domain: (-1, 1), t => (t, -calc.exp(-0.8 * t)))
+    },
+  )
+})
+
+== Time domain system analysis(refresher)
+
+=== Impulse response representation
+The impulse response function of an LTI system denoted as $h(t)$ is defined as the system's response to the unit impulse function $delta (t)$.
+
+#diagram(
+  spacing: 10pt,
+  node-stroke: 2pt,
+  edge-stroke: 1pt,
+  node((10, 1), [LTI \ System], width: 25mm, height: 15mm, name: <A>),
+  edge((0, 1), <A>, "-|>", [$x(t) = delta(t)$]),
+  edge(<A>, (18, 1), "-|>", [$y(t) = h(t)$], label-pos: 0.5),
+)
+
+The system response to any input $x(t)$ can be expressed as an integral involving the input and the system impulse response function $h(t)$,
+$
+  y(t) = integral_(-infinity)^infinity x(tau)h(t - tau)d tau = x(t)ast h(t).
+$
+
+This integral is called the convolution integral.
+
+==== System properties
+1. *Memoryless systems* : An LTI system is memoryless if and only if $h(t) = K delta(t)$, that is $y(t) = K x(t)$.
+2. *Invertibility* : An LTI system with impulse response $h(t)$ is invertible only if the function $h_i (t)$ can be found such that $h(t) ast h_i (t) = delta (t)$.
+3. *Causality* : An LTI system with impulse response $h(t)$ is causal if $h(t) = 0$ for all $t < 0$.
+4. *Stability* : An LTI system with impulse response $h(t)$ is BIBO stable if
+$
+  integral_(-infinity)^infinity |h(t)| d t < infinity .
+$
+If $h(t)$ satisfies this condition it is said to be absolutely integrable.
 
 = Continuous-Time Fourier Series
 
