@@ -2645,5 +2645,43 @@ The figure below shows $X_s (j omega)$ for two cases: sufficient sampling rate (
 
 Left: $omega_s > 2 omega_M$ — replicas are separated and the original spectrum (black) can be recovered. Right: $omega_s < 2 omega_M$ — replicas overlap (aliasing) and the baseband is corrupted.
 
+== The Nyquist-Shannon Sampling Theorem
+
+=== Statement and Proof
+
+#showybox(
+  frame: (
+    border-color: blue.darken(30%),
+    title-color: blue.darken(30%),
+    body-color: blue.lighten(90%),
+  ),
+  title-style: (color: black, weight: "regular", align: left),
+  title: "Key insight",
+  [*Nyquist-Shannon Sampling Theorem.* Let $x(t)$ be a signal whose spectrum is zero for $|omega| > omega_M$ (a *band-limited* signal with bandwidth $omega_M$). Then $x(t)$ is uniquely determined by its samples $x(n T_s)$ if and only if
+  $
+    omega_s = frac(2 pi, T_s) gt.eq 2 omega_M.
+  $
+  The minimum sampling frequency $omega_s = 2 omega_M$ (equivalently $f_s = 2 f_M$) is the *Nyquist rate*. Half of it, $f_M$, is the *Nyquist frequency*.],
+)
+
+*Proof (sufficiency).* When $omega_s > 2 omega_M$ the spectral replicas in $X_s (j omega)$ do not overlap. Passing $x_s (t)$ through an ideal low-pass filter with gain $T_s$ and cutoff $omega_c$ satisfying $omega_M < omega_c < omega_s - omega_M$ retains exactly the $k = 0$ replica:
+$
+  X_"rec" (j omega) = T_s dot "rect" lr((frac(omega, 2 omega_c))) dot X_s (j omega) = X(j omega).
+$
+Hence the output of the filter is $x(t)$ — perfect reconstruction. $square$
+
+*Proof (necessity).* If $omega_s < 2 omega_M$ the replicas centred at $k = plus.minus 1$ overlap with the $k = 0$ replica. No LTI filter can then separate them, so the original $X(j omega)$ cannot be recovered. $square$
+
+#showybox(
+  frame: (
+    border-color: red.darken(50%),
+    title-color: red.darken(50%),
+    body-color: red.lighten(90%),
+  ),
+  title-style: (color: black, weight: "regular", align: left),
+  title: "Note",
+  [The equality case $omega_s = 2 omega_M$ is a mathematical boundary: the replicas touch but do not overlap, and reconstruction is theoretically possible only for signals that have exactly zero energy at $omega = plus.minus omega_M$. In practice, strict inequality $omega_s > 2 omega_M$ is always required, and a safety margin (oversampling) is used to relax the reconstruction filter requirements.],
+)
+
 = State-Space Analysis
 
