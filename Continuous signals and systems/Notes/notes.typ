@@ -2772,5 +2772,131 @@ Both sinusoids pass through exactly the same sample values (black dots) — the 
   [Aliasing is irreversible once the signal has been sampled below the Nyquist rate. The only remedy is prevention: band-limit the signal with an anti-aliasing filter *before* the sampler.],
 )
 
+== Reconstruction
+
+=== Ideal Reconstruction
+
+When $omega_s > 2 omega_M$, $x(t)$ can be recovered exactly by passing $x_s (t)$ through an ideal low-pass filter $H_r (j omega)$ with gain $T_s$ and cutoff $omega_c in (omega_M, omega_s - omega_M)$:
+$
+  X(j omega) = H_r (j omega) X_s (j omega), quad H_r (j omega) = T_s dot "rect" lr((frac(omega, 2 omega_c))).
+$
+The impulse response of this ideal LPF is $h_r (t) = "sinc"(omega_c t) dot omega_c T_s \/ pi$. Convolving with $x_s (t) = sum_n x(n T_s) delta(t - n T_s)$ yields the *sinc interpolation formula*:
+$
+  x(t) = sum_(n=-infinity)^(infinity) x(n T_s) "sinc" lr((frac(pi (t - n T_s), T_s))),
+$
+where $"sinc"(u) = sin(u)\/u$. Every sample contributes a shifted sinc pulse of weight $x(n T_s)$; their superposition reconstructs $x(t)$ exactly at all times, not just at the sample instants.
+
+#showybox(
+  frame: (
+    border-color: blue.darken(30%),
+    title-color: blue.darken(30%),
+    body-color: blue.lighten(90%),
+  ),
+  title-style: (color: black, weight: "regular", align: left),
+  title: "Key insight",
+  [Each sample $x(n T_s)$ acts as the coefficient of a sinc basis function centred at $t = n T_s$. Because the sincs of different samples are orthogonal, the reconstruction is exact. This is the continuous-time analogue of expanding a vector in an orthonormal basis.],
+)
+
+=== Practical Reconstruction: Zero-Order Hold
+
+A real digital-to-analogue converter (DAC) cannot produce impulses. Instead it holds each sample value constant over one sampling period — this is the *zero-order hold* (ZOH). The ZOH output is
+$
+  x_"ZOH" (t) = sum_(n=-infinity)^(infinity) x(n T_s) [u(t - n T_s) - u(t - (n+1) T_s)].
+$
+This is equivalent to filtering $x_s (t)$ with a rectangular pulse of duration $T_s$:
+$
+  H_"ZOH" (j omega) = T_s "sinc" lr((frac(omega T_s, 2))) e^(-j omega T_s \/ 2).
+$
+The ZOH introduces magnitude distortion $|H_"ZOH"| = T_s |"sinc"(omega T_s\/2)|$ — a sinc roll-off that attenuates high-frequency components — and a linear phase corresponding to a half-sample delay. A *reconstruction filter* (post-filter) is applied after the DAC to correct this distortion.
+
+#cetz.canvas({
+  import cetz.draw: *
+  import cetz-plot: *
+
+  let fs  = 8.0
+  let f0  = 1.0
+  let Ts  = 1.0 / fs
+  let N   = 24
+
+  let x(t) = calc.cos(2 * calc.pi * f0 * t)
+
+  // ZOH output: piecewise constant
+  let zoh(t) = {
+    let n = calc.floor(t * fs)
+    x(n * Ts)
+  }
+
+  // sinc interpolation (truncated to 2*N+1 terms)
+  let sinc(u) = if calc.abs(u) < 0.0001 { 1.0 } else { calc.sin(u) / u }
+  let interp(t) = {
+    let s = 0.0
+    for n in range(-N, N + 1) {
+      s = s + x(n * Ts) * sinc(calc.pi * (t - n * Ts) / Ts)
+    }
+    s
+  }
+
+  plot.plot(
+    size: (12, 4),
+    x-tick-step: 0.25,
+    y-tick-step: 0.5,
+    y-min: -1.4,
+    y-max: 1.6,
+    x-min: 0,
+    x-max: 1.5,
+    x-label: [$t$ (s)],
+    y-label: "",
+    axis-style: "left",
+    legend: "inner-north-east",
+    {
+      plot.add(
+        domain: (0, 1.5),
+        t => (t, x(t)),
+        samples: 300,
+        style: (stroke: (paint: gray, dash: "dotted")),
+        label: [$x(t)$ (original)],
+      )
+      plot.add(
+        domain: (0.001, 1.499),
+        t => (t, zoh(t)),
+        samples: 800,
+        style: (stroke: (paint: blue)),
+        label: [ZOH output],
+      )
+      plot.add(
+        domain: (0, 1.5),
+        t => (t, interp(t)),
+        samples: 300,
+        style: (stroke: (paint: red, dash: "dashed")),
+        label: [Sinc interpolation],
+      )
+      plot.add(
+        range(0, 13).map(n => {
+          let t = n * Ts
+          (t, x(t))
+        }),
+        mark: "o",
+        mark-size: 0.2,
+        style: (stroke: none),
+        mark-style: (fill: black),
+        label: [samples],
+      )
+    },
+  )
+})
+
+The ZOH (blue) produces a staircase waveform; sinc interpolation (red dashed) recovers the original sinusoid (dotted) exactly.
+
+#showybox(
+  frame: (
+    border-color: red.darken(50%),
+    title-color: red.darken(50%),
+    body-color: red.lighten(90%),
+  ),
+  title-style: (color: black, weight: "regular", align: left),
+  title: "Note",
+  [The ideal sinc interpolator is non-causal (it requires all future samples) and therefore unrealisable in real time. Practical systems use causal FIR or IIR interpolation filters that approximate the sinc over a finite window, trading off reconstruction accuracy against filter complexity and latency.],
+)
+
 = State-Space Analysis
 
