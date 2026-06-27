@@ -2531,5 +2531,119 @@ The key properties of the Butterworth approximation are:
 
 = Nyquist's Sampling Theorem
 
+Chapters 1–5 have dealt exclusively with continuous-time signals and systems. In practice, signals are processed digitally: an analogue voltage is measured at discrete instants, converted to a binary number, processed by a computer, and converted back to an analogue output. The bridge between the continuous and discrete worlds is *sampling*. This chapter answers the fundamental question: how frequently must a continuous-time signal be sampled so that no information is lost, and how can the original signal be recovered from its samples?
+
+== Ideal Sampling
+
+=== The Impulse Train Sampler
+
+The mathematical model of an ideal sampler multiplies the continuous-time signal $x(t)$ by a periodic impulse train
+$
+  p(t) = sum_(n = -infinity)^(infinity) delta(t - n T_s),
+$
+where $T_s$ is the *sampling period* and $f_s = 1\/T_s$ is the *sampling frequency* in Hz (equivalently $omega_s = 2 pi f_s$ rad/s). The sampled signal is
+$
+  x_s (t) = x(t) p(t) = sum_(n=-infinity)^(infinity) x(n T_s) delta(t - n T_s).
+$
+Each impulse carries the signal value $x(n T_s)$ at that instant as its weight. The sampled signal is therefore a sequence of weighted impulses, one at each sampling instant.
+
+#diagram(
+  spacing: 10pt,
+  node-stroke: 2pt,
+  edge-stroke: 1pt,
+  node((0, 1), [$x(t)$], stroke: 0pt, name: <in>),
+  node((6, 1), [Sampler $times p(t)$], width: 30mm, height: 12mm, name: <S>),
+  node((14, 1), [$x_s (t)$], stroke: 0pt, name: <out>),
+  edge(<in>, <S>, "-|>"),
+  edge(<S>, <out>, "-|>"),
+)
+
+=== Spectrum of the Sampled Signal
+
+From Chapter 3, the Fourier transform of the impulse train is itself an impulse train (§3.4):
+$
+  P(j omega) = frac(2 pi, T_s) sum_(k=-infinity)^(infinity) delta(omega - k omega_s).
+$
+Since $x_s (t) = x(t) p(t)$, the multiplication-in-time property gives convolution in frequency:
+$
+  X_s (j omega) = frac(1, 2 pi) X(j omega) ast P(j omega)
+                = frac(1, T_s) sum_(k=-infinity)^(infinity) X(j(omega - k omega_s)).
+$
+The spectrum of the sampled signal is a *periodic replication* of $X(j omega)$, repeated every $omega_s$ rad/s and scaled by $1\/T_s$.
+
+#showybox(
+  frame: (
+    border-color: blue.darken(30%),
+    title-color: blue.darken(30%),
+    body-color: blue.lighten(90%),
+  ),
+  title-style: (color: black, weight: "regular", align: left),
+  title: "Key insight",
+  [Sampling in time is equivalent to periodic replication in frequency. Every $omega_s$ rad/s, a copy of $X(j omega)$ appears in the spectrum of $x_s (t)$. Whether these copies overlap depends on the relationship between $omega_s$ and the signal bandwidth $omega_M$ — this is the essence of the sampling theorem.],
+)
+
+The figure below shows $X_s (j omega)$ for two cases: sufficient sampling rate (replicas separated) and insufficient rate (replicas overlap).
+
+#cetz.canvas({
+  import cetz.draw: *
+  import cetz-plot: *
+
+  let tri(x, wm) = if calc.abs(x) <= wm { 1.0 - calc.abs(x) / wm } else { 0.0 }
+
+  plot.plot(
+    size: (5.5, 3),
+    x-tick-step: 3,
+    y-tick-step: 0.5,
+    y-min: -0.1,
+    y-max: 1.3,
+    x-min: -7,
+    x-max: 7,
+    x-label: $omega$,
+    y-label: [$|X_s (j omega)| slash T_s^(-1)$],
+    axis-style: "left",
+    {
+      for k in (-2, -1, 0, 1, 2) {
+        let s = if k == 0 { (stroke: black) } else { (stroke: (paint: blue.lighten(40%))) }
+        plot.add(
+          domain: (-7, 7),
+          t => (t, tri(t - k * 3, 1)),
+          samples: 300,
+          style: s,
+          mark: none,
+        )
+      }
+    },
+  )
+
+  cetz.draw.translate((8, 0))
+
+  plot.plot(
+    size: (5.5, 3),
+    x-tick-step: 3,
+    y-tick-step: 0.5,
+    y-min: -0.1,
+    y-max: 1.3,
+    x-min: -7,
+    x-max: 7,
+    x-label: $omega$,
+    y-label: [$|X_s (j omega)| slash T_s^(-1)$],
+    axis-style: "left",
+    {
+      for k in (-2, -1, 0, 1, 2) {
+        let s = if k == 0 { (stroke: black) } else { (stroke: (paint: red.lighten(40%))) }
+        plot.add(
+          domain: (-7, 7),
+          t => (t, tri(t - k * 3, 1.8)),
+          samples: 300,
+          style: s,
+          mark: none,
+        )
+      }
+    },
+  )
+})
+
+Left: $omega_s > 2 omega_M$ — replicas are separated and the original spectrum (black) can be recovered. Right: $omega_s < 2 omega_M$ — replicas overlap (aliasing) and the baseband is corrupted.
+
 = State-Space Analysis
 
