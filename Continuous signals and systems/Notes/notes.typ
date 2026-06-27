@@ -2488,6 +2488,47 @@ $
   [Mains notch filters are a common requirement in ECG and EEG systems. A higher $Q$ produces a narrower notch (less signal distortion on either side) but requires tighter component tolerances. A lower $Q$ is more robust to component variation but attenuates nearby signal frequencies.],
 )
 
+== Summary
+
+The Butterworth filter design procedure can be summarised in five steps:
+
++ *Specify* the filter requirements: passband edge $omega_p$, passband ripple $R_p$ (dB), stopband edge $omega_s$, and stopband attenuation $A_s$ (dB).
++ *Compute the order* using
+  $ n gt.eq frac(log lr((frac(10^(A_s\/10) - 1, 10^(R_p\/10) - 1))), 2 log (omega_s \/ omega_p)), $
+  rounding up to the nearest integer.
++ *Select the LP prototype* $H_n (s) = 1\/B_n (s)$ from the Butterworth polynomial table.
++ *Denormalise* by substituting $s arrow.r s\/omega_c$ to place the cutoff at the desired frequency.
++ *Apply a frequency transformation* if a HP, BP, or BS response is required.
+
+The key properties of the Butterworth approximation are:
+
+#table(
+  columns: (auto, 1fr),
+  inset: 8pt,
+  align: (left, left),
+  table.header([*Property*], [*Detail*]),
+  [Passband behaviour],   [Maximally flat — no ripple; all derivatives of $|H|^2$ vanish at $omega = 0$],
+  [Cutoff frequency],     [$-3$ dB for all orders at the normalised frequency $Omega = 1$],
+  [Roll-off rate],        [$-20n$ dB/decade asymptotically in the stopband],
+  [Pole locations],       [$n$ poles equally spaced on the left-half unit circle],
+  [Filter types],         [LP, HP, BP, BS all derived from the same LP prototype],
+)
+
+#showybox(
+  frame: (
+    border-color: blue.darken(30%),
+    title-color: blue.darken(30%),
+    body-color: blue.lighten(90%),
+  ),
+  title-style: (
+    color: black,
+    weight: "regular",
+    align: left,
+  ),
+  title: "Key insight",
+  [The Butterworth filter is the right choice when a monotone magnitude response and no passband ripple are essential — for example, in audio equalisation or precision measurement systems. When a sharper roll-off is needed at the cost of some passband ripple, Chebyshev or elliptic designs are preferred. Chapter 6 will show why the filter's passband edge $omega_p$ directly sets the minimum sampling rate needed to digitise a filtered analogue signal without aliasing.],
+)
+
 = Nyquist's Sampling Theorem
 
 = State-Space Analysis
