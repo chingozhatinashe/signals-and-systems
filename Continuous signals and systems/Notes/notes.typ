@@ -2078,6 +2078,98 @@ In dB this is $-20n log_10 Omega$, giving a high-frequency roll-off of *$-20n$ d
   [The roll-off rate of $-20n$ dB/decade only applies well into the stopband ($Omega >> 1$). In the transition band the actual slope is shallower. When checking whether a design meets spec, always evaluate $|H_n (j Omega)|$ directly at $omega_s$ rather than relying on the asymptotic rate.],
 )
 
+== Butterworth Poles and Transfer Function
+
+=== Pole Locations
+
+To find a causal, stable transfer function $H_n (s)$ realising the Butterworth response, note that
+$
+  |H_n (j omega)|^2 = H_n (s) H_n (-s) bar_(s = j omega) = frac(1, 1 + (-1)^n s^(2n)) bar_(s = j omega).
+$
+The $2n$ poles of $H_n (s) H_n (-s)$ are the roots of $1 + (-1)^n s^(2n) = 0$, which gives $s^(2n) = (-1)^(n+1)$. These $2n$ roots lie *equally spaced on the unit circle* in the $s$-plane:
+$
+  s_k = exp lr([j frac(pi (2k + n - 1), 2n)]), quad k = 1, 2, dots, 2n.
+$
+For a stable, causal filter we assign the $n$ poles in the *left half-plane* (Re$\{s_k\} < 0$) to $H_n (s)$; the remaining $n$ mirror-image poles belong to $H_n (-s)$.
+
+#showybox(
+  frame: (
+    border-color: blue.darken(30%),
+    title-color: blue.darken(30%),
+    body-color: blue.lighten(90%),
+  ),
+  title-style: (
+    color: black,
+    weight: "regular",
+    align: left,
+  ),
+  title: "Key insight",
+  [For *odd* $n$ there is always a real pole at $s = -1$, so $H_n (s)$ contains a first-order factor $(s + 1)$. For *even* $n$ all poles are complex conjugate pairs. This determines the cascade structure: odd-order designs have one first-order section; even-order designs consist entirely of second-order sections.],
+)
+
+The pole locations for $n = 3$ and $n = 4$ are shown below. Open circles mark the right-half-plane poles assigned to $H_n (-s)$; filled circles are the stable poles of $H_n (s)$.
+
+#cetz.canvas({
+  import cetz.draw: *
+
+  let poles(n, ox, oy) = {
+    for k in range(1, 2 * n + 1) {
+      let angle = calc.pi * (2 * k + n - 1) / (2 * n)
+      let x = calc.cos(angle)
+      let y = calc.sin(angle)
+      let stable = x < -0.001
+      if stable {
+        circle((ox + x, oy + y), radius: 0.08, fill: black)
+      } else {
+        circle((ox + x, oy + y), radius: 0.08, fill: white, stroke: black)
+      }
+    }
+  }
+
+  // unit circles
+  circle((3, 3), radius: 1, stroke: (dash: "dashed", paint: gray))
+  circle((9, 3), radius: 1, stroke: (dash: "dashed", paint: gray))
+
+  // axes n=3
+  line((0.5, 3), (5.5, 3), mark: (end: "stealth", fill: black))
+  line((3, 0.5), (3, 5.5), mark: (end: "stealth", fill: black))
+  content((5.6, 3), [$sigma$], anchor: "west")
+  content((3, 5.7), [$j omega$], anchor: "south")
+  content((3, 0.2), [$n = 3$], anchor: "north")
+
+  // axes n=4
+  line((6.5, 3), (11.5, 3), mark: (end: "stealth", fill: black))
+  line((9, 0.5), (9, 5.5), mark: (end: "stealth", fill: black))
+  content((11.6, 3), [$sigma$], anchor: "west")
+  content((9, 5.7), [$j omega$], anchor: "south")
+  content((9, 0.2), [$n = 4$], anchor: "north")
+
+  poles(3, 3, 3)
+  poles(4, 9, 3)
+})
+
+=== Transfer Function
+
+The normalised ($omega_c = 1$ rad/s) Butterworth transfer function is
+$
+  H_n (s) = frac(1, B_n (s)),
+$
+where $B_n (s) = product_(k=1)^n (s - s_k)$ is the *Butterworth polynomial* formed from the $n$ stable poles. The first five polynomials are:
+
+#table(
+  columns: (auto, 1fr),
+  inset: 8pt,
+  align: (center, left),
+  table.header([*Order $n$*], [*Butterworth polynomial $B_n (s)$*]),
+  [$1$], [$s + 1$],
+  [$2$], [$s^2 + sqrt(2) s + 1$],
+  [$3$], [$(s + 1)(s^2 + s + 1)$],
+  [$4$], [$(s^2 + 0.7654 s + 1)(s^2 + 1.8478 s + 1)$],
+  [$5$], [$(s + 1)(s^2 + 0.6180 s + 1)(s^2 + 1.6180 s + 1)$],
+)
+
+Each quadratic factor $s^2 + 2 zeta omega_0 s + omega_0^2$ has $omega_0 = 1$ (all poles on the unit circle) and a damping ratio $zeta = -cos(theta_k)$ where $theta_k$ is the pole angle. The $n = 2$ factor has $zeta = 1\/sqrt(2) approx 0.707$, the standard Butterworth damping ratio.
+
 = Nyquist's Sampling Theorem
 
 = State-Space Analysis
