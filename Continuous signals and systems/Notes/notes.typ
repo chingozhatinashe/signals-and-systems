@@ -2170,6 +2170,74 @@ where $B_n (s) = product_(k=1)^n (s - s_k)$ is the *Butterworth polynomial* form
 
 Each quadratic factor $s^2 + 2 zeta omega_0 s + omega_0^2$ has $omega_0 = 1$ (all poles on the unit circle) and a damping ratio $zeta = -cos(theta_k)$ where $theta_k$ is the pole angle. The $n = 2$ factor has $zeta = 1\/sqrt(2) approx 0.707$, the standard Butterworth damping ratio.
 
+== Filter Order Selection
+
+=== Order Formula
+
+Given the four design parameters $omega_p$, $R_p$, $omega_s$, $A_s$, the minimum Butterworth order that simultaneously satisfies both constraints is found by evaluating the magnitude-squared response at each specification edge:
+$
+  frac(1, 1 + (omega_p \/ omega_c)^(2n)) gt.eq 10^(-R_p\/10)
+  quad "and" quad
+  frac(1, 1 + (omega_s \/ omega_c)^(2n)) lt.eq 10^(-A_s\/10).
+$
+Solving each inequality for $n$ and taking the more demanding result gives
+$
+  n gt.eq frac(log lr((frac(10^(A_s\/10) - 1, 10^(R_p\/10) - 1))), 2 log (omega_s \/ omega_p)).
+$
+Round *up* to the nearest integer to guarantee both constraints are met.
+
+#showybox(
+  frame: (
+    border-color: red.darken(50%),
+    title-color: red.darken(50%),
+    body-color: red.lighten(90%),
+  ),
+  title-style: (
+    color: black,
+    weight: "regular",
+    align: left,
+  ),
+  title: "Note",
+  [Always round $n$ *up*. Rounding down produces a filter that meets neither the passband nor the stopband specification. Once $n$ is fixed, the cutoff $omega_c$ is chosen to place the excess margin in the stopband (passband-edge design) or split it between both bands depending on the application.],
+)
+
+=== Worked Example: Order Selection and Transfer Function
+
+*Problem.* Design a Butterworth low-pass filter with no more than 3 dB ripple at $omega_p = 1000$ rad/s and at least 20 dB attenuation at $omega_s = 3000$ rad/s. Determine the minimum order and write the denormalised transfer function.
+
+*Step 1 — Compute the order.*
+
+With $R_p = 3$ dB ($10^(R_p\/10) - 1 = 1$) and $A_s = 20$ dB ($10^(A_s\/10) - 1 approx 99$):
+$
+  n gt.eq frac(log(99 \/ 1), 2 log(3000 \/ 1000)) = frac(log 99, 2 log 3) approx frac(1.996, 0.954) approx 2.09.
+$
+Round up: $n = 3$.
+
+*Step 2 — Determine the cutoff frequency.*
+
+Placing the passband edge exactly at spec (passband-edge design) with $R_p = 3$ dB gives $epsilon.alt = 1$ and
+$
+  omega_c = frac(omega_p, (10^(R_p\/10) - 1)^(1\/(2n))) = frac(1000, 1^(1\/6)) = 1000 " rad/s."
+$
+
+*Step 3 — Write the transfer function.*
+
+From the $n = 3$ Butterworth polynomial $B_3 (s) = (s + 1)(s^2 + s + 1)$, denormalise by substituting $s arrow.r s \/ omega_c$:
+$
+  H(s) = frac(omega_c^3, (s + omega_c)(s^2 + omega_c s + omega_c^2))
+        = frac(10^9, (s + 1000)(s^2 + 1000 s + 10^6)).
+$
+
+*Step 4 — Verify stopband attenuation.*
+
+At $omega = omega_s = 3000$ rad/s, $Omega_s = omega_s \/ omega_c = 3$:
+$
+  |H_3 (j 3)| = frac(1, sqrt(1 + 3^6)) = frac(1, sqrt(730)) approx 0.037,
+$
+which in dB is $20 log_10 (0.037) approx -28.6$ dB $< -20$ dB. $checkmark$
+
+The design meets spec with 8.6 dB of stopband margin to spare.
+
 = Nyquist's Sampling Theorem
 
 = State-Space Analysis
