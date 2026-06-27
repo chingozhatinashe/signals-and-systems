@@ -2238,6 +2238,256 @@ which in dB is $20 log_10 (0.037) approx -28.6$ dB $< -20$ dB. $checkmark$
 
 The design meets spec with 8.6 dB of stopband margin to spare.
 
+== Frequency Transformations
+
+Once a normalised Butterworth LP prototype $H_n (s)$ is designed, algebraic substitutions map it to high-pass, band-pass, or band-stop responses without repeating the approximation step. All four standard filter types therefore share a single set of Butterworth tables.
+
+#showybox(
+  frame: (
+    border-color: blue.darken(30%),
+    title-color: blue.darken(30%),
+    body-color: blue.lighten(90%),
+  ),
+  title-style: (
+    color: black,
+    weight: "regular",
+    align: left,
+  ),
+  title: "Key insight",
+  [Every frequency transformation is a change of variable $s arrow.r f(s)$ that maps the LP passband edge $Omega = 1$ to the desired passband edge(s) of the target filter. The substitution is applied directly to $H_n (s)$; no new pole-location calculation is needed.],
+)
+
+=== Low-Pass to High-Pass
+
+Replace $s arrow.r omega_c \/ s$ in the normalised prototype:
+$
+  H_"HP" (s) = H_n lr((frac(omega_c, s))).
+$
+This maps $Omega = omega / omega_c arrow.r omega_c \/ omega$, so the LP passband ($|Omega| lt.eq 1$) becomes the HP passband ($omega gt.eq omega_c$) and the LP stopband maps to the HP stopband. The filter order is unchanged; an $n$th-order LP yields an $n$th-order HP.
+
+#cetz.canvas({
+  import cetz.draw: *
+  import cetz-plot: *
+
+  let hp(x, n, wc) = 1.0 / calc.sqrt(1.0 + calc.pow(wc / x, 2 * n))
+
+  plot.plot(
+    size: (12, 4),
+    x-tick-step: 500,
+    y-tick-step: 0.2,
+    y-min: -0.05,
+    y-max: 1.15,
+    x-min: 0,
+    x-max: 3000,
+    x-label: [$omega$ (rad/s)],
+    y-label: $|H_"HP" (j omega)|$,
+    axis-style: "left",
+    legend: "inner-south-east",
+    {
+      plot.add(
+        domain: (10, 3000), t => (t, hp(t, 2, 500)), samples: 300,
+        label: $n = 2$,
+      )
+      plot.add(
+        domain: (10, 3000), t => (t, hp(t, 3, 500)), samples: 300,
+        style: (stroke: (dash: "dashed")), label: $n = 3$,
+      )
+      plot.add(
+        ((500, 0), (500, 1.0 / calc.sqrt(2.0))),
+        style: (stroke: (dash: "dotted", paint: gray)), mark: none,
+      )
+    },
+  )
+})
+
+==== Worked Example: High-Pass Filter
+
+*Problem.* Design a 2nd-order Butterworth HPF with $-3$ dB at $omega_c = 500$ rad/s. Verify that the attenuation at $omega = 100$ rad/s exceeds 20 dB.
+
+*Step 1 — LP prototype.* For $n = 2$:
+$
+  H_2 (s) = frac(1, s^2 + sqrt(2) s + 1).
+$
+
+*Step 2 — Apply LP$arrow.r$HP transformation* with $s arrow.r 500 \/ s$:
+$
+  H_"HP" (s) = H_2 lr((frac(500, s)))
+             = frac(1, lr((frac(500, s)))^2 + sqrt(2) frac(500, s) + 1)
+             = frac(s^2, s^2 + 500 sqrt(2) s + 500^2).
+$
+
+*Step 3 — Verify attenuation at $omega = 100$ rad/s.*
+
+The normalised frequency is $Omega = omega_c \/ omega = 500 \/ 100 = 5$ (LP domain):
+$
+  |H_"HP" (j 100)| = |H_2 (j 5)| = frac(1, sqrt(1 + 5^4)) = frac(1, sqrt(626)) approx 0.040,
+$
+giving $20 log_10 (0.040) approx -28.0$ dB $< -20$ dB. $checkmark$
+
+=== Low-Pass to Band-Pass
+
+Replace $s arrow.r Q lr((s \/ omega_0 + omega_0 \/ s))$ where $omega_0 = sqrt(omega_1 omega_2)$ is the geometric centre frequency, $B = omega_2 - omega_1$ is the $-3$ dB bandwidth, and $Q = omega_0 \/ B$ is the quality factor:
+$
+  H_"BP" (s) = H_n lr((Q lr((frac(s, omega_0) + frac(omega_0, s))))).
+$
+The LP passband $|Omega| lt.eq 1$ maps to the BP passband $omega_1 lt.eq omega lt.eq omega_2$. An $n$th-order LP prototype yields a *$2n$th-order* band-pass filter.
+
+#cetz.canvas({
+  import cetz.draw: *
+  import cetz-plot: *
+
+  let bp(w, n, w0, Q) = {
+    let lp_arg = if w == 0.0 { 1e10 } else { Q * (w / w0 - w0 / w) }
+    1.0 / calc.sqrt(1.0 + calc.pow(lp_arg, 2 * n))
+  }
+
+  plot.plot(
+    size: (12, 4),
+    x-tick-step: 500,
+    y-tick-step: 0.2,
+    y-min: -0.05,
+    y-max: 1.15,
+    x-min: 0,
+    x-max: 3000,
+    x-label: [$omega$ (rad/s)],
+    y-label: $|H_"BP" (j omega)|$,
+    axis-style: "left",
+    legend: "inner-north-east",
+    {
+      plot.add(
+        domain: (10, 3000), t => (t, bp(t, 1, 1000, 5)), samples: 400,
+        label: $n = 1$,
+      )
+      plot.add(
+        domain: (10, 3000), t => (t, bp(t, 2, 1000, 5)), samples: 400,
+        style: (stroke: (dash: "dashed")), label: $n = 2$,
+      )
+      plot.add(
+        ((1000, 0), (1000, 1.0)),
+        style: (stroke: (dash: "dotted", paint: gray)), mark: none,
+      )
+    },
+  )
+})
+
+==== Worked Example: Band-Pass Filter
+
+*Problem.* Design a Butterworth BPF with centre frequency $omega_0 = 1000$ rad/s, $-3$ dB bandwidth $B = 200$ rad/s, and at least 20 dB attenuation at $omega = 500$ rad/s. Use the lowest order LP prototype that meets spec.
+
+*Step 1 — Map the stopband edge to the LP domain.*
+
+$Q = omega_0 \/ B = 1000 \/ 200 = 5$. The LP equivalent frequency at $omega = 500$ rad/s is
+$
+  Omega_s = Q lr((frac(omega_s, omega_0) - frac(omega_0, omega_s))) = 5 lr((frac(500, 1000) - frac(1000, 500))) = 5(-1.5) = -7.5.
+$
+By symmetry $|Omega_s| = 7.5$; use the LP order formula with $omega_p \/ omega_c = 1$ and $omega_s \/ omega_c = 7.5$, $A_s = 20$ dB:
+$
+  n gt.eq frac(log(99), 2 log(7.5)) approx frac(1.996, 1.749) approx 1.14 arrow.r n = 2.
+$
+
+*Step 2 — LP prototype* ($n = 2$):
+$
+  H_2 (s) = frac(1, s^2 + sqrt(2) s + 1).
+$
+
+*Step 3 — Apply LP$arrow.r$BP transformation* with $omega_0 = 1000$, $Q = 5$:
+$
+  H_"BP" (s) = H_2 lr((5 lr((frac(s, 1000) + frac(1000, s))))).
+$
+This yields a 4th-order band-pass filter. Expanding gives
+$
+  H_"BP" (s) = frac(4 times 10^6 s^2, s^4 + 2 sqrt(2) times 100 s^3 + (2 times 10^6 + 2 times 10^4) s^2 + 2 sqrt(2) times 10^8 s + 10^12).
+$
+
+*Step 4 — Verify.* At $omega = 500$ rad/s, $Omega = -7.5$ (LP domain):
+$
+  |H_2 (j 7.5)| = frac(1, sqrt(1 + 7.5^4)) approx frac(1, sqrt(3165)) approx 0.018,
+$
+giving $approx -35$ dB $< -20$ dB. $checkmark$
+
+=== Low-Pass to Band-Stop
+
+Replace $s arrow.r 1 \/ [Q (s \/ omega_0 + omega_0 \/ s)]$:
+$
+  H_"BS" (s) = H_n lr((frac(1, Q (s \/ omega_0 + omega_0 \/ s)))).
+$
+The LP passband maps to the BS stopband and the LP stopband maps to the two BS passbands on either side of $omega_0$. As with the BP case, an $n$th-order LP prototype produces a $2n$th-order band-stop filter.
+
+#cetz.canvas({
+  import cetz.draw: *
+  import cetz-plot: *
+
+  let bs(w, n, w0, Q) = {
+    let arg = if w == 0.0 { 1e10 } else { Q * (w / w0 - w0 / w) }
+    let lp_arg = if arg == 0.0 { 1e10 } else { 1.0 / arg }
+    1.0 / calc.sqrt(1.0 + calc.pow(lp_arg, 2 * n))
+  }
+
+  plot.plot(
+    size: (12, 4),
+    x-tick-step: 500,
+    y-tick-step: 0.2,
+    y-min: -0.05,
+    y-max: 1.15,
+    x-min: 0,
+    x-max: 3000,
+    x-label: [$omega$ (rad/s)],
+    y-label: $|H_"BS" (j omega)|$,
+    axis-style: "left",
+    legend: "inner-north-east",
+    {
+      plot.add(
+        domain: (10, 950), t => (t, bs(t, 2, 1000, 5)), samples: 300,
+        label: $n = 2$,
+      )
+      plot.add(
+        domain: (1050, 3000), t => (t, bs(t, 2, 1000, 5)), samples: 300,
+        mark: none,
+      )
+    },
+  )
+})
+
+==== Worked Example: Band-Stop (Notch) Filter
+
+*Problem.* A biomedical acquisition system picks up 50 Hz mains interference. Design a Butterworth BSF to attenuate the tone at $omega_0 = 2 pi times 50 approx 314$ rad/s by at least 30 dB while keeping $|H| gt.eq -3$ dB for all $omega lt.eq 0.8 omega_0$ and $omega gt.eq 1.2 omega_0$.
+
+*Step 1 — Identify parameters.*
+
+The passband edges are $omega_1 = 0.8 omega_0 = 251$ rad/s and $omega_2 = 1.2 omega_0 = 377$ rad/s, giving $B = 126$ rad/s and $Q = omega_0 \/ B = 314 \/ 126 approx 2.49$.
+
+*Step 2 — Map the passband edge to the LP prototype.*
+
+The BS passband edge at $omega_1 = 0.8 omega_0$ maps to the LP domain as
+$
+  Omega_p = frac(1, Q (omega_1 \/ omega_0 - omega_0 \/ omega_1)) = frac(1, 2.49(0.8 - 1.25)) = frac(1, 2.49 times (-0.45)) approx 0.892.
+$
+By the LP$arrow.r$BS duality, $|Omega_p| = 0.892 < 1$, which confirms the passband requirement of $R_p = 3$ dB is met with margin. The effective LP stopband edge (corresponding to the BS notch at $omega_0$) maps to $Omega_s arrow.r infinity$, so *any* finite order meets the 30 dB notch depth requirement in principle. The roll-off near $omega_0$ determines the practical notch width.
+
+For a 2nd-order LP prototype ($n = 2$), which gives a 4th-order BSF:
+
+*Step 3 — Apply LP$arrow.r$BS transformation* with $omega_0 = 314$ rad/s, $Q = 2.49$:
+$
+  H_"BS" (s) = H_2 lr((frac(1, 2.49 (s\/314 + 314\/s)))).
+$
+
+*Step 4 — Verify notch depth.* At $omega = omega_0$ the LP argument $arrow.r infinity$, so $H_2 (j infinity) = 0$ — the notch is theoretically infinite. In practice component tolerances limit notch depth to 40–60 dB.
+
+#showybox(
+  frame: (
+    border-color: red.darken(50%),
+    title-color: red.darken(50%),
+    body-color: red.lighten(90%),
+  ),
+  title-style: (
+    color: black,
+    weight: "regular",
+    align: left,
+  ),
+  title: "Note",
+  [Mains notch filters are a common requirement in ECG and EEG systems. A higher $Q$ produces a narrower notch (less signal distortion on either side) but requires tighter component tolerances. A lower $Q$ is more robust to component variation but attenuates nearby signal frequencies.],
+)
+
 = Nyquist's Sampling Theorem
 
 = State-Space Analysis
