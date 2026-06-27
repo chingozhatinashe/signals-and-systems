@@ -1897,6 +1897,90 @@ This relationship (the *Wiener–Khinchin theorem* for energy signals) is useful
 
 = Butterworth Filter Design
 
+Chapter 3 established that the ideal low-pass filter has a rectangular frequency response — unity gain in the passband and zero gain in the stopband. Its impulse response is a sinc function that is nonzero for $t < 0$, making it non-causal and physically unrealisable. Practical filter design constructs a *causal*, stable, rational transfer function $H(s)$ whose magnitude response approximates the ideal as closely as possible. The Butterworth filter is the simplest such approximation: it achieves the flattest possible magnitude in the passband for a given filter order, at the cost of a gradual roll-off rather than a brick-wall transition.
+
+== Filter Specifications
+
+A low-pass filter design is governed by four parameters that bound its magnitude response $|H(j omega)|$:
+
+- *Passband edge* $omega_p$: all frequencies $|omega| lt.eq omega_p$ must pass with magnitude no less than $10^(-R_p slash 20)$, where $R_p > 0$ is the maximum allowable passband ripple in dB.
+- *Stopband edge* $omega_s > omega_p$: all frequencies $|omega| gt.eq omega_s$ must satisfy $|H(j omega)| lt.eq 10^(-A_s slash 20)$, where $A_s > 0$ is the minimum required stopband attenuation in dB.
+- *Transition band* $omega_p < |omega| < omega_s$: no constraint is imposed here. A narrow transition band demands a higher filter order.
+
+Introducing the shorthand $epsilon.alt^2 = 10^(R_p\/10) - 1$ and $delta_s = 10^(-A_s\/20)$, the constraints become
+$
+  |H(j omega_p)| gt.eq frac(1, sqrt(1 + epsilon.alt^2)), quad |H(j omega_s)| lt.eq delta_s.
+$
+
+The figure below illustrates the specification regions. The shaded areas are *forbidden* — the filter magnitude must stay out of them.
+
+#cetz.canvas({
+  import cetz.draw: *
+  import cetz-plot: *
+
+  let bw(x) = 1.0 / calc.sqrt(1.0 + calc.pow(x, 8))
+
+  let rp_level = 1.0 / calc.sqrt(2.0)
+  let as_level = 0.1
+
+  plot.plot(
+    size: (12, 5),
+    x-tick-step: 1,
+    y-tick-step: 0.2,
+    y-min: -0.05,
+    y-max: 1.25,
+    x-min: 0,
+    x-max: 3.5,
+    x-label: $omega \/ omega_p$,
+    y-label: $|H(j omega)|$,
+    axis-style: "left",
+    legend: "inner-north-east",
+    {
+      plot.add(
+        domain: (0, 3.5),
+        t => (t, bw(t)),
+        samples: 300,
+        label: [Practical LPF ($n = 4$)],
+      )
+      plot.add(
+        ((0, rp_level), (1.0, rp_level)),
+        style: (stroke: (dash: "dashed", paint: blue)),
+        label: [$1\/sqrt(1+epsilon.alt^2)$ (passband edge)],
+      )
+      plot.add(
+        ((1.0, 0), (1.0, rp_level)),
+        style: (stroke: (dash: "dashed", paint: blue)),
+        mark: none,
+      )
+      plot.add(
+        ((0, as_level), (2.0, as_level)),
+        style: (stroke: (dash: "dashed", paint: red)),
+        label: [$delta_s$ (stopband limit)],
+      )
+      plot.add(
+        ((2.0, 0), (2.0, as_level)),
+        style: (stroke: (dash: "dashed", paint: red)),
+        mark: none,
+      )
+    },
+  )
+})
+
+#showybox(
+  frame: (
+    border-color: red.darken(50%),
+    title-color: red.darken(50%),
+    body-color: red.lighten(90%),
+  ),
+  title-style: (
+    color: black,
+    weight: "regular",
+    align: left,
+  ),
+  title: "Note",
+  [A common special case is $R_p = 3$ dB, giving $epsilon.alt = 1$. This places the passband edge exactly at the half-power point and is the convention used in Butterworth design tables — the normalised cutoff $Omega = 1$ always corresponds to a $-3$ dB attenuation.],
+)
+
 = Nyquist's Sampling Theorem
 
 = State-Space Analysis
