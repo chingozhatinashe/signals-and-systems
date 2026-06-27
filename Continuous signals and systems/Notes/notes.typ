@@ -2531,5 +2531,517 @@ The key properties of the Butterworth approximation are:
 
 = Nyquist's Sampling Theorem
 
+Chapters 1–5 have dealt exclusively with continuous-time signals and systems. In practice, signals are processed digitally: an analogue voltage is measured at discrete instants, converted to a binary number, processed by a computer, and converted back to an analogue output. The bridge between the continuous and discrete worlds is *sampling*. This chapter answers the fundamental question: how frequently must a continuous-time signal be sampled so that no information is lost, and how can the original signal be recovered from its samples?
+
+== Ideal Sampling
+
+=== The Impulse Train Sampler
+
+The mathematical model of an ideal sampler multiplies the continuous-time signal $x(t)$ by a periodic impulse train
+$
+  p(t) = sum_(n = -infinity)^(infinity) delta(t - n T_s),
+$
+where $T_s$ is the *sampling period* and $f_s = 1\/T_s$ is the *sampling frequency* in Hz (equivalently $omega_s = 2 pi f_s$ rad/s). The sampled signal is
+$
+  x_s (t) = x(t) p(t) = sum_(n=-infinity)^(infinity) x(n T_s) delta(t - n T_s).
+$
+Each impulse carries the signal value $x(n T_s)$ at that instant as its weight. The sampled signal is therefore a sequence of weighted impulses, one at each sampling instant.
+
+#diagram(
+  spacing: 10pt,
+  node-stroke: 2pt,
+  edge-stroke: 1pt,
+  node((0, 1), [$x(t)$], stroke: 0pt, name: <in>),
+  node((6, 1), [Sampler $times p(t)$], width: 30mm, height: 12mm, name: <S>),
+  node((14, 1), [$x_s (t)$], stroke: 0pt, name: <out>),
+  edge(<in>, <S>, "-|>"),
+  edge(<S>, <out>, "-|>"),
+)
+
+=== Spectrum of the Sampled Signal
+
+From Chapter 3, the Fourier transform of the impulse train is itself an impulse train (§3.4):
+$
+  P(j omega) = frac(2 pi, T_s) sum_(k=-infinity)^(infinity) delta(omega - k omega_s).
+$
+Since $x_s (t) = x(t) p(t)$, the multiplication-in-time property gives convolution in frequency:
+$
+  X_s (j omega) = frac(1, 2 pi) X(j omega) ast P(j omega)
+                = frac(1, T_s) sum_(k=-infinity)^(infinity) X(j(omega - k omega_s)).
+$
+The spectrum of the sampled signal is a *periodic replication* of $X(j omega)$, repeated every $omega_s$ rad/s and scaled by $1\/T_s$.
+
+#showybox(
+  frame: (
+    border-color: blue.darken(30%),
+    title-color: blue.darken(30%),
+    body-color: blue.lighten(90%),
+  ),
+  title-style: (color: black, weight: "regular", align: left),
+  title: "Key insight",
+  [Sampling in time is equivalent to periodic replication in frequency. Every $omega_s$ rad/s, a copy of $X(j omega)$ appears in the spectrum of $x_s (t)$. Whether these copies overlap depends on the relationship between $omega_s$ and the signal bandwidth $omega_M$ — this is the essence of the sampling theorem.],
+)
+
+The figure below shows $X_s (j omega)$ for two cases: sufficient sampling rate (replicas separated) and insufficient rate (replicas overlap).
+
+#cetz.canvas({
+  import cetz.draw: *
+  import cetz-plot: *
+
+  let tri(x, wm) = if calc.abs(x) <= wm { 1.0 - calc.abs(x) / wm } else { 0.0 }
+
+  plot.plot(
+    size: (5.5, 3),
+    x-tick-step: 3,
+    y-tick-step: 0.5,
+    y-min: -0.1,
+    y-max: 1.3,
+    x-min: -7,
+    x-max: 7,
+    x-label: $omega$,
+    y-label: [$|X_s (j omega)| slash T_s^(-1)$],
+    axis-style: "left",
+    {
+      for k in (-2, -1, 0, 1, 2) {
+        let s = if k == 0 { (stroke: black) } else { (stroke: (paint: blue.lighten(40%))) }
+        plot.add(
+          domain: (-7, 7),
+          t => (t, tri(t - k * 3, 1)),
+          samples: 300,
+          style: s,
+          mark: none,
+        )
+      }
+    },
+  )
+
+  cetz.draw.translate((8, 0))
+
+  plot.plot(
+    size: (5.5, 3),
+    x-tick-step: 3,
+    y-tick-step: 0.5,
+    y-min: -0.1,
+    y-max: 1.3,
+    x-min: -7,
+    x-max: 7,
+    x-label: $omega$,
+    y-label: [$|X_s (j omega)| slash T_s^(-1)$],
+    axis-style: "left",
+    {
+      for k in (-2, -1, 0, 1, 2) {
+        let s = if k == 0 { (stroke: black) } else { (stroke: (paint: red.lighten(40%))) }
+        plot.add(
+          domain: (-7, 7),
+          t => (t, tri(t - k * 3, 1.8)),
+          samples: 300,
+          style: s,
+          mark: none,
+        )
+      }
+    },
+  )
+})
+
+Left: $omega_s > 2 omega_M$ — replicas are separated and the original spectrum (black) can be recovered. Right: $omega_s < 2 omega_M$ — replicas overlap (aliasing) and the baseband is corrupted.
+
+== The Nyquist-Shannon Sampling Theorem
+
+=== Statement and Proof
+
+#showybox(
+  frame: (
+    border-color: blue.darken(30%),
+    title-color: blue.darken(30%),
+    body-color: blue.lighten(90%),
+  ),
+  title-style: (color: black, weight: "regular", align: left),
+  title: "Key insight",
+  [*Nyquist-Shannon Sampling Theorem.* Let $x(t)$ be a signal whose spectrum is zero for $|omega| > omega_M$ (a *band-limited* signal with bandwidth $omega_M$). Then $x(t)$ is uniquely determined by its samples $x(n T_s)$ if and only if
+  $
+    omega_s = frac(2 pi, T_s) gt.eq 2 omega_M.
+  $
+  The minimum sampling frequency $omega_s = 2 omega_M$ (equivalently $f_s = 2 f_M$) is the *Nyquist rate*. Half of it, $f_M$, is the *Nyquist frequency*.],
+)
+
+*Proof (sufficiency).* When $omega_s > 2 omega_M$ the spectral replicas in $X_s (j omega)$ do not overlap. Passing $x_s (t)$ through an ideal low-pass filter with gain $T_s$ and cutoff $omega_c$ satisfying $omega_M < omega_c < omega_s - omega_M$ retains exactly the $k = 0$ replica:
+$
+  X_"rec" (j omega) = T_s dot "rect" lr((frac(omega, 2 omega_c))) dot X_s (j omega) = X(j omega).
+$
+Hence the output of the filter is $x(t)$ — perfect reconstruction. $square$
+
+*Proof (necessity).* If $omega_s < 2 omega_M$ the replicas centred at $k = plus.minus 1$ overlap with the $k = 0$ replica. No LTI filter can then separate them, so the original $X(j omega)$ cannot be recovered. $square$
+
+#showybox(
+  frame: (
+    border-color: red.darken(50%),
+    title-color: red.darken(50%),
+    body-color: red.lighten(90%),
+  ),
+  title-style: (color: black, weight: "regular", align: left),
+  title: "Note",
+  [The equality case $omega_s = 2 omega_M$ is a mathematical boundary: the replicas touch but do not overlap, and reconstruction is theoretically possible only for signals that have exactly zero energy at $omega = plus.minus omega_M$. In practice, strict inequality $omega_s > 2 omega_M$ is always required, and a safety margin (oversampling) is used to relax the reconstruction filter requirements.],
+)
+
+== Aliasing
+
+=== Cause and Effect
+
+When the sampling rate violates the Nyquist condition ($omega_s < 2 omega_M$), the spectral replicas in $X_s (j omega)$ overlap. The baseband component of $X_s (j omega)$ is then no longer equal to $X(j omega)\/T_s$; instead it is the *sum* of $X(j omega)\/T_s$ and the tails of neighbouring replicas. No filter applied after sampling can undo this corruption — aliasing is an irreversible loss of information.
+
+Frequency components of $x(t)$ above the Nyquist frequency $omega_s\/2$ are *folded* back into the baseband. A component at frequency $omega_0 > omega_s\/2$ appears in the sampled signal at the alias frequency
+$
+  omega_"alias" = omega_0 - k omega_s,
+$
+where the integer $k$ is chosen so that $omega_"alias" in [- omega_s\/2,\ omega_s\/2]$.
+
+=== Worked Example: Aliasing of a Sinusoid
+
+*Problem.* Show that $x(t) = cos(2 pi dot 900 t)$ (900 Hz) sampled at $f_s = 1000$ Hz produces the same sample sequence as $cos(2 pi dot 100 t)$ (100 Hz).
+
+*Solution.* The alias formula gives
+$
+  f_"alias" = 900 - 1 times 1000 = -100 " Hz,"
+$
+and since cosine is even, $cos(-2 pi dot 100 t) = cos(2 pi dot 100 t)$. At every sample instant $t = n\/1000$:
+$
+  x(n\/f_s) = cos lr((frac(2 pi dot 900 n, 1000))) = cos lr((frac(2 pi dot 900 n, 1000) - 2pi n)) = cos lr((frac(-2pi dot 100 n, 1000))),
+$
+which is identical to $cos(2 pi dot 100 dot n\/f_s)$. The 900 Hz tone is indistinguishable from a 100 Hz tone at this sampling rate. $square$
+
+#cetz.canvas({
+  import cetz.draw: *
+  import cetz-plot: *
+
+  let fs = 1000.0
+  let f0 = 900.0
+  let fa = 100.0
+  let Ts = 1.0 / fs
+
+  plot.plot(
+    size: (12, 4),
+    x-tick-step: 0.002,
+    y-tick-step: 0.5,
+    y-min: -1.3,
+    y-max: 1.5,
+    x-min: 0,
+    x-max: 0.012,
+    x-label: [$t$ (s)],
+    y-label: "",
+    axis-style: "left",
+    legend: "inner-north-east",
+    {
+      plot.add(
+        domain: (0, 0.012),
+        t => (t, calc.cos(2 * calc.pi * f0 * t)),
+        samples: 400,
+        label: [$x(t) = cos(2pi dot 900 t)$],
+      )
+      plot.add(
+        domain: (0, 0.012),
+        t => (t, calc.cos(2 * calc.pi * fa * t)),
+        samples: 400,
+        style: (stroke: (dash: "dashed", paint: red)),
+        label: [$cos(2pi dot 100 t)$ (alias)],
+      )
+      plot.add(
+        range(0, 13).map(n => {
+          let t = n * Ts
+          (t, calc.cos(2 * calc.pi * f0 * t))
+        }),
+        mark: "o",
+        mark-size: 0.2,
+        style: (stroke: none),
+        mark-style: (fill: black),
+        label: [samples],
+      )
+    },
+  )
+})
+
+Both sinusoids pass through exactly the same sample values (black dots) — the sampler cannot distinguish between them.
+
+#showybox(
+  frame: (
+    border-color: red.darken(50%),
+    title-color: red.darken(50%),
+    body-color: red.lighten(90%),
+  ),
+  title-style: (color: black, weight: "regular", align: left),
+  title: "Note",
+  [Aliasing is irreversible once the signal has been sampled below the Nyquist rate. The only remedy is prevention: band-limit the signal with an anti-aliasing filter *before* the sampler.],
+)
+
+== Reconstruction
+
+=== Ideal Reconstruction
+
+When $omega_s > 2 omega_M$, $x(t)$ can be recovered exactly by passing $x_s (t)$ through an ideal low-pass filter $H_r (j omega)$ with gain $T_s$ and cutoff $omega_c in (omega_M, omega_s - omega_M)$:
+$
+  X(j omega) = H_r (j omega) X_s (j omega), quad H_r (j omega) = T_s dot "rect" lr((frac(omega, 2 omega_c))).
+$
+The impulse response of this ideal LPF is $h_r (t) = "sinc"(omega_c t) dot omega_c T_s \/ pi$. Convolving with $x_s (t) = sum_n x(n T_s) delta(t - n T_s)$ yields the *sinc interpolation formula*:
+$
+  x(t) = sum_(n=-infinity)^(infinity) x(n T_s) "sinc" lr((frac(pi (t - n T_s), T_s))),
+$
+where $"sinc"(u) = sin(u)\/u$. Every sample contributes a shifted sinc pulse of weight $x(n T_s)$; their superposition reconstructs $x(t)$ exactly at all times, not just at the sample instants.
+
+#showybox(
+  frame: (
+    border-color: blue.darken(30%),
+    title-color: blue.darken(30%),
+    body-color: blue.lighten(90%),
+  ),
+  title-style: (color: black, weight: "regular", align: left),
+  title: "Key insight",
+  [Each sample $x(n T_s)$ acts as the coefficient of a sinc basis function centred at $t = n T_s$. Because the sincs of different samples are orthogonal, the reconstruction is exact. This is the continuous-time analogue of expanding a vector in an orthonormal basis.],
+)
+
+=== Practical Reconstruction: Zero-Order Hold
+
+A real digital-to-analogue converter (DAC) cannot produce impulses. Instead it holds each sample value constant over one sampling period — this is the *zero-order hold* (ZOH). The ZOH output is
+$
+  x_"ZOH" (t) = sum_(n=-infinity)^(infinity) x(n T_s) [u(t - n T_s) - u(t - (n+1) T_s)].
+$
+This is equivalent to filtering $x_s (t)$ with a rectangular pulse of duration $T_s$:
+$
+  H_"ZOH" (j omega) = T_s "sinc" lr((frac(omega T_s, 2))) e^(-j omega T_s \/ 2).
+$
+The ZOH introduces magnitude distortion $|H_"ZOH"| = T_s |"sinc"(omega T_s\/2)|$ — a sinc roll-off that attenuates high-frequency components — and a linear phase corresponding to a half-sample delay. A *reconstruction filter* (post-filter) is applied after the DAC to correct this distortion.
+
+#cetz.canvas({
+  import cetz.draw: *
+  import cetz-plot: *
+
+  let fs  = 8.0
+  let f0  = 1.0
+  let Ts  = 1.0 / fs
+  let N   = 24
+
+  let x(t) = calc.cos(2 * calc.pi * f0 * t)
+
+  // ZOH output: piecewise constant
+  let zoh(t) = {
+    let n = calc.floor(t * fs)
+    x(n * Ts)
+  }
+
+  // sinc interpolation (truncated to 2*N+1 terms)
+  let sinc(u) = if calc.abs(u) < 0.0001 { 1.0 } else { calc.sin(u) / u }
+  let interp(t) = {
+    let s = 0.0
+    for n in range(-N, N + 1) {
+      s = s + x(n * Ts) * sinc(calc.pi * (t - n * Ts) / Ts)
+    }
+    s
+  }
+
+  plot.plot(
+    size: (12, 4),
+    x-tick-step: 0.25,
+    y-tick-step: 0.5,
+    y-min: -1.4,
+    y-max: 1.6,
+    x-min: 0,
+    x-max: 1.5,
+    x-label: [$t$ (s)],
+    y-label: "",
+    axis-style: "left",
+    legend: "inner-north-east",
+    {
+      plot.add(
+        domain: (0, 1.5),
+        t => (t, x(t)),
+        samples: 300,
+        style: (stroke: (paint: gray, dash: "dotted")),
+        label: [$x(t)$ (original)],
+      )
+      plot.add(
+        domain: (0.001, 1.499),
+        t => (t, zoh(t)),
+        samples: 800,
+        style: (stroke: (paint: blue)),
+        label: [ZOH output],
+      )
+      plot.add(
+        domain: (0, 1.5),
+        t => (t, interp(t)),
+        samples: 300,
+        style: (stroke: (paint: red, dash: "dashed")),
+        label: [Sinc interpolation],
+      )
+      plot.add(
+        range(0, 13).map(n => {
+          let t = n * Ts
+          (t, x(t))
+        }),
+        mark: "o",
+        mark-size: 0.2,
+        style: (stroke: none),
+        mark-style: (fill: black),
+        label: [samples],
+      )
+    },
+  )
+})
+
+The ZOH (blue) produces a staircase waveform; sinc interpolation (red dashed) recovers the original sinusoid (dotted) exactly.
+
+#showybox(
+  frame: (
+    border-color: red.darken(50%),
+    title-color: red.darken(50%),
+    body-color: red.lighten(90%),
+  ),
+  title-style: (color: black, weight: "regular", align: left),
+  title: "Note",
+  [The ideal sinc interpolator is non-causal (it requires all future samples) and therefore unrealisable in real time. Practical systems use causal FIR or IIR interpolation filters that approximate the sinc over a finite window, trading off reconstruction accuracy against filter complexity and latency.],
+)
+
+== Practical Considerations
+
+=== Anti-Aliasing Filter
+
+No real-world signal is strictly band-limited — energy always extends to arbitrarily high frequencies. Before an ADC can sample a signal without aliasing, a low-pass *anti-aliasing filter* must attenuate all frequency content above $omega_s\/2$ to a negligible level. The system chain is therefore:
+
+#diagram(
+  spacing: 10pt,
+  node-stroke: 2pt,
+  edge-stroke: 1pt,
+  node((0, 1), [$x(t)$], stroke: 0pt, name: <in>),
+  node((5, 1), [Anti-alias\ LPF], width: 22mm, height: 14mm, name: <F>),
+  node((11, 1), [ADC\ sampler], width: 22mm, height: 14mm, name: <S>),
+  node((17, 1), [$x[n]$], stroke: 0pt, name: <out>),
+  edge(<in>, <F>, "-|>"),
+  edge(<F>, <S>, "-|>"),
+  edge(<S>, <out>, "-|>"),
+)
+
+The filter cutoff $omega_c$ and the sampling rate $omega_s$ must be chosen jointly: a higher $omega_s$ widens the transition band $[omega_c, omega_s - omega_c]$, allowing a lower-order (simpler) anti-aliasing filter for the same stopband attenuation.
+
+==== Worked Example: Anti-Aliasing Filter Design
+
+*Problem.* An audio signal occupies 0–4 kHz. Choose a sampling rate and design a Butterworth anti-aliasing LPF such that:
+- Passband: $|H| gt.eq -1$ dB for $f lt.eq 4$ kHz
+- Stopband: $|H| lt.eq -40$ dB for $f gt.eq f_s\/2$
+
+*Step 1 — Choose the sampling rate.* Select $f_s = 10$ kHz (2.5× the signal bandwidth). The Nyquist frequency is $f_s\/2 = 5$ kHz, giving a 1 kHz transition band $[4, 5]$ kHz.
+
+*Step 2 — Filter specification.*
+$
+  omega_p = 2pi times 4000 " rad/s," quad R_p = 1 " dB;"
+  quad omega_s = 2pi times 5000 " rad/s," quad A_s = 40 " dB."
+$
+
+*Step 3 — Compute the Butterworth order.*
+$
+  n gt.eq frac(log lr((frac(10^4 - 1, 10^0.1 - 1))), 2 log (5000\/4000))
+        = frac(log(9999\/0.2589), 2 log(1.25))
+        approx frac(4.587, 0.194)
+        approx 23.6.
+$
+Round up: $bold(n = 24)$.
+
+*Step 4 — Determine the cutoff frequency.* Using passband-edge design ($R_p = 1$ dB exactly at $omega_p$):
+$
+  omega_c = frac(omega_p, (10^(R_p\/10) - 1)^(1\/(2n)))
+          = frac(2pi times 4000, (0.2589)^(1\/48))
+          approx 2pi times 4000 times 1.030
+          approx 2pi times 4120 " rad/s."
+$
+
+*Step 5 — Verify stopband attenuation* at $omega = 2pi times 5000$ rad/s:
+$
+  Omega_s = frac(omega_s, omega_c) approx frac(5000, 4120) approx 1.214,
+  quad |H_(24)(j Omega_s)| = frac(1, sqrt(1 + 1.214^48)) approx frac(1, sqrt(1.4 times 10^4)) approx 0.0085,
+$
+giving $20 log_10(0.0085) approx -41.4$ dB $< -40$ dB. $checkmark$
+
+*Step 6 — Design trade-off.* Increasing $f_s$ to 20 kHz doubles the transition band to $[4, 10]$ kHz. Re-applying the order formula:
+$
+  n gt.eq frac(log(9999\/0.2589), 2 log(10000\/4000)) approx frac(4.587, 0.796) approx 5.76 arrow.r n = 6.
+$
+A four-fold increase in sampling rate reduces the filter order from 24 to 6 — a dramatic simplification at the cost of more ADC speed and storage.
+
+#showybox(
+  frame: (
+    border-color: red.darken(50%),
+    title-color: red.darken(50%),
+    body-color: red.lighten(90%),
+  ),
+  title-style: (color: black, weight: "regular", align: left),
+  title: "Note",
+  [The joint choice of $f_s$ and filter order is a fundamental system design trade-off. A higher sampling rate relaxes the anti-aliasing filter requirements — each doubling of $f_s$ roughly halves the required filter order. In high-volume consumer electronics (audio codecs, sensor front-ends) this trade-off drives the choice of oversampling ratio.],
+)
+
+=== Oversampling
+
+Sampling well above the Nyquist rate — *oversampling* by a factor $M = f_s \/ (2 f_M)$ — has two practical benefits beyond relaxing the anti-aliasing filter:
+
++ *Reduced quantisation noise in band.* If the ADC introduces quantisation noise with power spectral density spread uniformly from $0$ to $f_s\/2$, oversampling by $M$ reduces the in-band noise power by a factor $M$ (equivalently $10 log_10 M$ dB), gaining approximately $1.76$ dB per octave of oversampling — equivalent to half an extra bit of resolution per octave.
++ *Simpler reconstruction filter.* On the DAC side, a higher $f_s$ means the spectral images (replicas) are farther from the baseband, so the post-DAC smoothing filter has a wider transition band and can be lower order.
+
+#showybox(
+  frame: (
+    border-color: blue.darken(30%),
+    title-color: blue.darken(30%),
+    body-color: blue.lighten(90%),
+  ),
+  title-style: (color: black, weight: "regular", align: left),
+  title: "Key insight",
+  [CD audio uses $f_s = 44.1$ kHz for a 20 kHz audio band — an oversampling factor of $M = 44100\/(2 times 20000) = 1.1$, barely above Nyquist. Modern players upsample to 176.4 kHz or 352.8 kHz (4× or 8× oversampling) in software before the DAC, dramatically simplifying the analogue reconstruction filter while improving noise performance.],
+)
+
+== Summary
+
+The key results of this chapter are collected below.
+
+#table(
+  columns: (auto, 1fr),
+  inset: 8pt,
+  align: (left, left),
+  table.header([*Concept*], [*Result*]),
+  [Sampled signal spectrum],   [$X_s (j omega) = frac(1, T_s) sum_k X(j(omega - k omega_s))$ — periodic replication with spacing $omega_s$],
+  [Nyquist condition],         [$omega_s gt.eq 2 omega_M$ — sampling rate must be at least twice the signal bandwidth],
+  [Nyquist rate],              [$f_s = 2 f_M$ — the minimum sampling frequency for a band-limited signal],
+  [Aliasing],                  [Occurs when $omega_s < 2 omega_M$; component at $f_0$ folds to $f_0 - k f_s$; irreversible],
+  [Ideal reconstruction],      [Ideal LPF with gain $T_s$ and cutoff $omega_s\/2$; equivalent to sinc interpolation],
+  [Zero-order hold],           [$H_"ZOH" (j omega) = T_s "sinc"(omega T_s\/2) e^(-j omega T_s\/2)$; requires post-filter correction],
+  [Anti-aliasing filter],      [Butterworth LPF before the ADC; order and $f_s$ chosen jointly],
+  [Oversampling],              [Factor $M$ reduces in-band quantisation noise by $10 log_10 M$ dB; relaxes filter order],
+)
+
+The complete analogue-to-digital-to-analogue signal chain is:
+
+#diagram(
+  spacing: 8pt,
+  node-stroke: 2pt,
+  edge-stroke: 1pt,
+  node((0, 1), [$x(t)$], stroke: 0pt, name: <in>),
+  node((4, 1), [Anti-alias\ LPF], width: 22mm, height: 14mm, name: <aa>),
+  node((9, 1), [ADC], width: 16mm, height: 14mm, name: <adc>),
+  node((13, 1), [DSP], width: 16mm, height: 14mm, name: <dsp>),
+  node((17, 1), [DAC\ (ZOH)], width: 18mm, height: 14mm, name: <dac>),
+  node((22, 1), [Recon.\ filter], width: 22mm, height: 14mm, name: <rf>),
+  node((26, 1), [$y(t)$], stroke: 0pt, name: <out>),
+  edge(<in>, <aa>, "-|>"),
+  edge(<aa>, <adc>, "-|>"),
+  edge(<adc>, <dsp>, "-|>"),
+  edge(<dsp>, <dac>, "-|>"),
+  edge(<dac>, <rf>, "-|>"),
+  edge(<rf>, <out>, "-|>"),
+)
+
+#showybox(
+  frame: (
+    border-color: blue.darken(30%),
+    title-color: blue.darken(30%),
+    body-color: blue.lighten(90%),
+  ),
+  title-style: (color: black, weight: "regular", align: left),
+  title: "Key insight",
+  [The Nyquist theorem is the theoretical foundation for all digital signal processing. It guarantees that a band-limited continuous-time signal loses no information when sampled at or above the Nyquist rate, making the conversion between analogue and digital domains lossless in principle. Every practical ADC/DAC system — audio, communications, medical imaging, instrumentation — is designed around this result.],
+)
+
 = State-Space Analysis
 
