@@ -2683,5 +2683,94 @@ Hence the output of the filter is $x(t)$ — perfect reconstruction. $square$
   [The equality case $omega_s = 2 omega_M$ is a mathematical boundary: the replicas touch but do not overlap, and reconstruction is theoretically possible only for signals that have exactly zero energy at $omega = plus.minus omega_M$. In practice, strict inequality $omega_s > 2 omega_M$ is always required, and a safety margin (oversampling) is used to relax the reconstruction filter requirements.],
 )
 
+== Aliasing
+
+=== Cause and Effect
+
+When the sampling rate violates the Nyquist condition ($omega_s < 2 omega_M$), the spectral replicas in $X_s (j omega)$ overlap. The baseband component of $X_s (j omega)$ is then no longer equal to $X(j omega)\/T_s$; instead it is the *sum* of $X(j omega)\/T_s$ and the tails of neighbouring replicas. No filter applied after sampling can undo this corruption — aliasing is an irreversible loss of information.
+
+Frequency components of $x(t)$ above the Nyquist frequency $omega_s\/2$ are *folded* back into the baseband. A component at frequency $omega_0 > omega_s\/2$ appears in the sampled signal at the alias frequency
+$
+  omega_"alias" = omega_0 - k omega_s,
+$
+where the integer $k$ is chosen so that $omega_"alias" in [- omega_s\/2,\ omega_s\/2]$.
+
+=== Worked Example: Aliasing of a Sinusoid
+
+*Problem.* Show that $x(t) = cos(2 pi dot 900 t)$ (900 Hz) sampled at $f_s = 1000$ Hz produces the same sample sequence as $cos(2 pi dot 100 t)$ (100 Hz).
+
+*Solution.* The alias formula gives
+$
+  f_"alias" = 900 - 1 times 1000 = -100 " Hz,"
+$
+and since cosine is even, $cos(-2 pi dot 100 t) = cos(2 pi dot 100 t)$. At every sample instant $t = n\/1000$:
+$
+  x(n\/f_s) = cos lr((frac(2 pi dot 900 n, 1000))) = cos lr((frac(2 pi dot 900 n, 1000) - 2pi n)) = cos lr((frac(-2pi dot 100 n, 1000))),
+$
+which is identical to $cos(2 pi dot 100 dot n\/f_s)$. The 900 Hz tone is indistinguishable from a 100 Hz tone at this sampling rate. $square$
+
+#cetz.canvas({
+  import cetz.draw: *
+  import cetz-plot: *
+
+  let fs = 1000.0
+  let f0 = 900.0
+  let fa = 100.0
+  let Ts = 1.0 / fs
+
+  plot.plot(
+    size: (12, 4),
+    x-tick-step: 0.002,
+    y-tick-step: 0.5,
+    y-min: -1.3,
+    y-max: 1.5,
+    x-min: 0,
+    x-max: 0.012,
+    x-label: [$t$ (s)],
+    y-label: "",
+    axis-style: "left",
+    legend: "inner-north-east",
+    {
+      plot.add(
+        domain: (0, 0.012),
+        t => (t, calc.cos(2 * calc.pi * f0 * t)),
+        samples: 400,
+        label: [$x(t) = cos(2pi dot 900 t)$],
+      )
+      plot.add(
+        domain: (0, 0.012),
+        t => (t, calc.cos(2 * calc.pi * fa * t)),
+        samples: 400,
+        style: (stroke: (dash: "dashed", paint: red)),
+        label: [$cos(2pi dot 100 t)$ (alias)],
+      )
+      plot.add(
+        range(0, 13).map(n => {
+          let t = n * Ts
+          (t, calc.cos(2 * calc.pi * f0 * t))
+        }),
+        mark: "o",
+        mark-size: 0.2,
+        style: (stroke: none),
+        mark-style: (fill: black),
+        label: [samples],
+      )
+    },
+  )
+})
+
+Both sinusoids pass through exactly the same sample values (black dots) — the sampler cannot distinguish between them.
+
+#showybox(
+  frame: (
+    border-color: red.darken(50%),
+    title-color: red.darken(50%),
+    body-color: red.lighten(90%),
+  ),
+  title-style: (color: black, weight: "regular", align: left),
+  title: "Note",
+  [Aliasing is irreversible once the signal has been sampled below the Nyquist rate. The only remedy is prevention: band-limit the signal with an anti-aliasing filter *before* the sampler.],
+)
+
 = State-Space Analysis
 
