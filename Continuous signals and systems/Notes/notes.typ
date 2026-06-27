@@ -890,6 +890,1011 @@ The output is dominated by the fundamental ($n = plus.minus 1$) since higher har
 
 = Continuous-Time Fourier Transform
 
+== From Fourier Series to the Fourier Transform
+
+In Chapter 2 we represented *periodic* signals as a discrete sum of complex exponentials. Most signals of engineering interest — a single pulse, a decaying transient, a finite-duration waveform — are *aperiodic*. To handle these we extend the Fourier Series by considering what happens when the period $T_0$ grows without bound.
+
+=== The Limiting Argument
+
+Consider a periodic signal $tilde(x)(t)$ with period $T_0$ whose single period $|t| < T_0/2$ matches a given aperiodic signal $x(t)$. As $T_0 arrow.r infinity$ the periodic replica moves infinitely far from the origin and $tilde(x)(t) arrow.r x(t)$ everywhere.
+
+The Fourier coefficients of $tilde(x)(t)$ are
+$
+  c_n = frac(1, T_0) integral_(-T_0\/2)^(T_0\/2) tilde(x)(t) e^(-j n omega_0 t) dif t.
+$
+Define the *spectral envelope* $X(j omega)$ by
+$
+  X(j omega) = integral_(-infinity)^(infinity) x(t) e^(-j omega t) dif t,
+$
+so that $T_0 c_n = X(j n omega_0)$, i.e. $c_n = X(j n omega_0) / T_0$.
+
+Substituting into the synthesis equation:
+$
+  tilde(x)(t) = sum_(n = -infinity)^(infinity) c_n e^(j n omega_0 t)
+             = sum_(n = -infinity)^(infinity) frac(X(j n omega_0), T_0) e^(j n omega_0 t)
+             = frac(1, 2 pi) sum_(n = -infinity)^(infinity) X(j n omega_0) e^(j n omega_0 t) Delta omega,
+$
+where $Delta omega = omega_0 = 2 pi / T_0$. As $T_0 arrow.r infinity$, the harmonic spacing $Delta omega arrow.r dif omega$ and the discrete sum passes to a Riemann integral:
+$
+  x(t) = frac(1, 2 pi) integral_(-infinity)^(infinity) X(j omega) e^(j omega t) dif omega.
+$
+This is the *inverse Fourier transform* (synthesis equation). The companion *forward transform* (analysis equation) is identified as
+$
+  X(j omega) = integral_(-infinity)^(infinity) x(t) e^(-j omega t) dif omega.
+$
+
+#showybox(
+  frame: (
+    border-color: blue.darken(30%),
+    title-color: blue.darken(30%),
+    body-color: blue.lighten(90%),
+  ),
+  title-style: (color: black, weight: "regular", align: left),
+  title: "Key insight",
+  [The passage from Fourier Series to Fourier Transform is the passage from a discrete spectrum (line spectrum at harmonics $n omega_0$) to a *continuous spectrum* $X(j omega)$. The Fourier coefficient $c_n$ is replaced by the spectral density $X(j omega) \/ 2pi$ — a density because energy is now spread continuously over frequency rather than concentrated at discrete lines.],
+)
+
+=== The Spectrum
+
+$X(j omega)$ is in general complex. Writing it in polar form
+$
+  X(j omega) = |X(j omega)| e^(j angle.l X(j omega)),
+$
+we call $|X(j omega)|$ the *magnitude spectrum* and $angle.l X(j omega)$ the *phase spectrum* of $x(t)$. Together they carry all the frequency-domain information about the signal.
+
+== Definition and Existence
+
+=== The Fourier Transform Pair
+
+The *Continuous-Time Fourier Transform (CTFT)* of a signal $x(t)$ and its inverse are defined by the pair
+
+$
+  X(j omega) = integral_(-infinity)^(infinity) x(t) e^(-j omega t) dif t
+  quad quad "(analysis / forward transform)"
+$
+$
+  x(t) = frac(1, 2 pi) integral_(-infinity)^(infinity) X(j omega) e^(j omega t) dif omega
+  quad "(synthesis / inverse transform)"
+$
+
+We write this relationship compactly as $x(t) arrows.lr^(cal(F)) X(j omega)$, or equivalently $X(j omega) = cal(F){x(t)}$ and $x(t) = cal(F)^(-1){X(j omega)}$.
+
+#showybox(
+  frame: (
+    border-color: red.darken(50%),
+    title-color: red.darken(50%),
+    body-color: red.lighten(90%),
+  ),
+  title-style: (color: black, weight: "regular", align: left),
+  title: "Note",
+  [Two sign conventions exist in the literature. This course follows the *engineering convention*: $e^(-j omega t)$ in the forward transform and $e^(+j omega t)$ in the inverse, with the $1\/(2pi)$ factor on the inverse. Oppenheim \& Willsky and Lathi both use this convention.],
+)
+
+=== Conditions for Existence (Dirichlet Conditions)
+
+Not every signal has a Fourier transform in the classical sense. The following *Dirichlet conditions* are *sufficient* (not necessary) to guarantee that $X(j omega)$ exists and that the inverse transform reconstructs $x(t)$:
+
++ *Absolute integrability:* $integral_(-infinity)^(infinity) |x(t)| dif t < infinity$.
++ *Finite extrema:* $x(t)$ has a finite number of maxima and minima in every finite interval.
++ *Finite discontinuities:* $x(t)$ has a finite number of jump discontinuities in every finite interval, each of finite size.
+
+When these conditions hold, $X(j omega)$ is well-defined and the inverse transform converges to $x(t)$ at every point of continuity, and to the average $frac{1}{2}[x(t^+) + x(t^-)]$ at each jump.
+
+#showybox(
+  frame: (
+    border-color: red.darken(50%),
+    title-color: red.darken(50%),
+    body-color: red.lighten(90%),
+  ),
+  title-style: (color: black, weight: "regular", align: left),
+  title: "Note",
+  [Several signals that violate condition 1 — notably $u(t)$, $cos(omega_0 t)$, and the unit impulse $delta(t)$ — are so important in system analysis that their transforms are defined using *generalised functions* (distributions). These involve Dirac deltas in the frequency domain and are covered in §4.3 and §4.4.],
+)
+
+== Common Fourier Transform Pairs
+
+This section derives the transforms of the signals most frequently encountered in system analysis. Each result is worth memorising; a summary table is given at the end.
+
+=== Rectangular Pulse (Gate Function)
+
+Define the rectangular pulse of width $tau$ and unit amplitude:
+$
+  x(t) = "rect"(t \/ tau) = cases(1 & |t| lt.eq tau\/2, 0 & |t| > tau\/2.)
+$
+Applying the forward transform:
+$
+  X(j omega) &= integral_(-tau\/2)^(tau\/2) e^(-j omega t) dif t
+              = lr([frac(e^(-j omega t), -j omega)])_(-tau\/2)^(tau\/2)
+              = frac(e^(-j omega tau\/2) - e^(j omega tau\/2), -j omega) \
+             &= frac(2 sin(omega tau \/ 2), omega)
+              = tau dot frac(sin(omega tau \/ 2), omega tau \/ 2)
+              = tau , "sinc"(omega tau \/ 2),
+$
+where $"sinc"(u) = sin(u)\/u$ (unnormalised). Therefore
+$
+  "rect"(t \/ tau) arrows.lr^(cal(F)) tau , "sinc"(omega tau \/ 2).
+$
+
+#cetz.canvas({
+  import cetz.draw: *
+  import cetz-plot: *
+
+  let sinc(x) = if calc.abs(x) < 0.001 { 1.0 } else { calc.sin(x) / x }
+
+  plot.plot(
+    size: (6, 4),
+    x-tick-step: 1,
+    y-tick-step: 0.5,
+    y-min: -0.3,
+    y-max: 1.3,
+    x-min: -3,
+    x-max: 3,
+    x-label: $t$,
+    y-label: $x(t)$,
+    axis-style: "left",
+    {
+      plot.add(((-3, 0), (-1, 0), (-1, 1), (1, 1), (1, 0), (3, 0)), line: "hv")
+    },
+  )
+
+  cetz.draw.translate((9, 0))
+
+  plot.plot(
+    size: (6, 4),
+    x-tick-step: calc.pi,
+    y-tick-step: 0.5,
+    y-min: -0.5,
+    y-max: 2.3,
+    x-min: -3 * calc.pi,
+    x-max: 3 * calc.pi,
+    x-label: $omega$,
+    y-label: $X(j omega)$,
+    axis-style: "left",
+    {
+      plot.add(
+        domain: (-3 * calc.pi, 3 * calc.pi),
+        t => (t, 2.0 * sinc(t)),
+        samples: 300,
+      )
+    },
+  )
+})
+
+=== Decaying Exponential
+
+For $a > 0$, consider the causal decaying exponential $x(t) = e^(-a t) u(t)$:
+$
+  X(j omega) = integral_0^(infinity) e^(-a t) e^(-j omega t) dif t
+             = integral_0^(infinity) e^(-(a + j omega) t) dif t
+             = lr([frac(e^(-(a+j omega)t), -(a + j omega))])_0^(infinity)
+             = frac(1, a + j omega).
+$
+The integral converges because $a > 0$ ensures $e^(-(a+j omega)t) arrow.r 0$ as $t arrow.r infinity$. Therefore
+$
+  e^(-a t) u(t) arrows.lr^(cal(F)) frac(1, a + j omega), quad a > 0.
+$
+The magnitude spectrum is a *Lorentzian*: $|X(j omega)| = 1\/sqrt(a^2 + omega^2)$, which decays as $1/omega$ for large $|omega|$. The 3 dB bandwidth (where $|X|$ falls to $1\/sqrt(2)$ of its DC value) is $omega_(3"dB") = a$ rad/s.
+
+#cetz.canvas({
+  import cetz.draw: *
+  import cetz-plot: *
+
+  plot.plot(
+    size: (6, 4),
+    x-tick-step: 1,
+    y-tick-step: 0.5,
+    y-min: -0.1,
+    y-max: 1.3,
+    x-min: -1,
+    x-max: 5,
+    x-label: $t$,
+    y-label: $e^(-a t)u(t)$,
+    axis-style: "left",
+    {
+      plot.add(((-1, 0), (0, 0)))
+      plot.add(domain: (0, 5), t => (t, calc.exp(-t)))
+    },
+  )
+
+  cetz.draw.translate((9, 0))
+
+  plot.plot(
+    size: (6, 4),
+    x-tick-step: 2,
+    y-tick-step: 0.5,
+    y-min: -0.1,
+    y-max: 1.3,
+    x-min: -6,
+    x-max: 6,
+    x-label: $omega$,
+    y-label: $|X(j omega)|$,
+    axis-style: "left",
+    {
+      plot.add(
+        domain: (-6, 6),
+        t => (t, 1.0 / calc.sqrt(1.0 + t * t)),
+        samples: 200,
+      )
+    },
+  )
+})
+
+=== Two-Sided Decaying Exponential
+
+For $a > 0$, let $x(t) = e^(-a|t|)$. Split the integral at $t = 0$:
+$
+  X(j omega) &= integral_(-infinity)^0 e^(a t) e^(-j omega t) dif t
+               + integral_0^(infinity) e^(-a t) e^(-j omega t) dif t \
+             &= frac(1, a - j omega) + frac(1, a + j omega)
+              = frac(2a, a^2 + omega^2).
+$
+This is a real, even, positive function of $omega$ — the phase spectrum is zero everywhere.
+
+=== Unit Impulse
+
+$
+  cal(F){delta(t)} = integral_(-infinity)^(infinity) delta(t) e^(-j omega t) dif t = e^(-j omega dot 0) = 1.
+$
+The impulse has a *flat* (white) spectrum: all frequencies are present with equal magnitude. For a time-shifted impulse:
+$
+  cal(F){delta(t - t_0)} = e^(-j omega t_0).
+$
+The magnitude is still 1 for all $omega$; only the phase $-omega t_0$ changes.
+
+=== Constant Signal and the DC Impulse
+
+Taking the inverse transform of $2 pi delta(omega)$:
+$
+  frac(1, 2 pi) integral_(-infinity)^(infinity) 2 pi delta(omega) e^(j omega t) dif omega = 1.
+$
+Therefore $cal(F){1} = 2 pi delta(omega)$. This result makes physical sense: a constant signal is pure DC, so its entire energy is concentrated at $omega = 0$.
+
+=== Signum Function
+
+The signum function $"sgn"(t) = u(t) - u(-t)$ is an odd signal. It can be obtained as a limit of the two-sided exponential:
+$
+  "sgn"(t) = lim_(a arrow.r 0) cases(e^(-a t) & t > 0, -e^(a t) & t < 0.)
+$
+Taking the transform and letting $a arrow.r 0$:
+$
+  cal(F){"sgn"(t)} = lim_(a arrow.r 0) lr((frac(1, a + j omega) - frac(1, a - j omega))) = frac(2, j omega).
+$
+
+=== Unit Step
+
+Since $u(t) = frac{1}{2} + frac{1}{2}"sgn"(t)$, linearity gives
+$
+  cal(F){u(t)} = pi delta(omega) + frac(1, j omega).
+$
+The $pi delta(omega)$ term captures the nonzero mean (DC component); the $1\/(j omega)$ term accounts for the step edge.
+
+=== Summary Table of Transform Pairs
+
+#table(
+  columns: (auto, auto),
+  inset: 8pt,
+  align: (left, left),
+  table.header([*Signal $x(t)$*], [*Transform $X(j omega)$*]),
+  [$"rect"(t\/tau)$],           [$tau , "sinc"(omega tau \/ 2)$],
+  [$"sinc"(W t \/ 2) \/ pi$],   [$"rect"(omega \/ (2W))$],
+  [$e^(-a t)u(t),  a>0$],       [$1\/(a + j omega)$],
+  [$t e^(-a t)u(t),  a>0$],     [$1\/(a + j omega)^2$],
+  [$e^(-a|t|),  a>0$],          [$2a\/(a^2 + omega^2)$],
+  [$e^(-a t^2)$],               [$sqrt(pi\/a) e^(-omega^2\/(4a))$],
+  [$delta(t)$],                 [$1$],
+  [$delta(t - t_0)$],           [$e^(-j omega t_0)$],
+  [$1$],                        [$2 pi delta(omega)$],
+  [$"sgn"(t)$],                 [$2\/(j omega)$],
+  [$u(t)$],                     [$pi delta(omega) + 1\/(j omega)$],
+  [$cos(omega_0 t)$],           [$pi[delta(omega - omega_0) + delta(omega + omega_0)]$],
+  [$sin(omega_0 t)$],           [$j pi[delta(omega + omega_0) - delta(omega - omega_0)]$],
+)
+
+== Fourier Transform of Periodic Signals
+
+A periodic signal $x(t)$ with period $T_0$ violates the absolute integrability condition, so its Fourier transform does not exist in the classical sense. However, we can use the Fourier Series representation together with the result $cal(F){1} = 2pi delta(omega)$ to assign a transform that is consistent with the inverse transform formula.
+
+=== Derivation
+
+Write the Fourier Series of $x(t)$:
+$
+  x(t) = sum_(n = -infinity)^(infinity) c_n e^(j n omega_0 t).
+$
+Taking the Fourier transform term-by-term and using $cal(F){e^(j n omega_0 t)} = 2pi delta(omega - n omega_0)$:
+$
+  X(j omega) = 2pi sum_(n = -infinity)^(infinity) c_n delta(omega - n omega_0).
+$
+The spectrum of a periodic signal is a *train of impulses* in frequency, located at the harmonics $omega = n omega_0$, each weighted by $2pi c_n$.
+
+#showybox(
+  frame: (
+    border-color: blue.darken(30%),
+    title-color: blue.darken(30%),
+    body-color: blue.lighten(90%),
+  ),
+  title-style: (color: black, weight: "regular", align: left),
+  title: "Key insight",
+  [This result unifies periodic and aperiodic signals under one framework: both have a Fourier transform, but periodic signals have a *discrete* (impulsive) spectrum while aperiodic signals have a *continuous* spectrum. The Fourier Series is simply the special case of the Fourier Transform for periodic signals.],
+)
+
+=== Example: Sinusoid
+
+For $x(t) = cos(omega_0 t) = frac{1}{2}(e^(j omega_0 t) + e^(-j omega_0 t))$, the Fourier Series has $c_1 = c_(-1) = 1/2$ and all other $c_n = 0$. Therefore
+$
+  cal(F){cos(omega_0 t)} = pi [delta(omega - omega_0) + delta(omega + omega_0)].
+$
+Two impulses of weight $pi$ sit symmetrically at $plus.minus omega_0$. Similarly
+$
+  cal(F){sin(omega_0 t)} = j pi [delta(omega + omega_0) - delta(omega - omega_0)].
+$
+
+#cetz.canvas({
+  import cetz.draw: *
+  import cetz-plot: *
+
+  plot.plot(
+    size: (6, 4),
+    x-tick-step: calc.pi,
+    y-tick-step: 0.5,
+    y-min: -1.3,
+    y-max: 1.3,
+    x-min: -2 * calc.pi,
+    x-max: 2 * calc.pi,
+    x-label: $t$,
+    y-label: $cos(omega_0 t)$,
+    axis-style: "left",
+    {
+      plot.add(
+        domain: (-2 * calc.pi, 2 * calc.pi),
+        t => (t, calc.cos(t)),
+        samples: 200,
+      )
+    },
+  )
+
+  cetz.draw.translate((9, 0))
+
+  plot.plot(
+    size: (6, 4),
+    x-tick-step: 2,
+    y-tick-step: 1,
+    y-min: -0.3,
+    y-max: 1.3,
+    x-min: -5,
+    x-max: 5,
+    x-label: $omega$,
+    y-label: $|X(j omega)| \/ pi$,
+    axis-style: "left",
+    {
+      plot.add(((-5, 0), (-1, 0)), mark: none)
+      plot.add(((-1, 0), (-1, 1)), mark: "o", mark-size: 0.15)
+      plot.add(((-1, 0), (1, 0)), mark: none)
+      plot.add(((1, 0), (1, 1)), mark: "o", mark-size: 0.15)
+      plot.add(((1, 0), (5, 0)), mark: none)
+    },
+  )
+})
+
+=== Example: Periodic Impulse Train
+
+The *periodic impulse train* (Shah function) is defined as
+$
+  p(t) = sum_(n = -infinity)^(infinity) delta(t - n T_0).
+$
+Its Fourier Series coefficients are $c_n = 1/T_0$ for all $n$ (since each impulse is identical). Therefore
+$
+  cal(F){p(t)} = frac(2pi, T_0) sum_(n=-infinity)^(infinity) delta(omega - n omega_0) = omega_0 sum_(n=-infinity)^(infinity) delta(omega - n omega_0).
+$
+*A periodic impulse train in time transforms to a periodic impulse train in frequency*, with spacing $omega_0 = 2pi\/T_0$. This result is fundamental to the derivation of the Nyquist Sampling Theorem (Chapter 6).
+
+#showybox(
+  frame: (
+    border-color: red.darken(50%),
+    title-color: red.darken(50%),
+    body-color: red.lighten(90%),
+  ),
+  title-style: (color: black, weight: "regular", align: left),
+  title: "Note",
+  [The impulse train result shows the *inverse relationship* between time and frequency: a denser train in time ($T_0$ small, $omega_0$ large) produces a sparser train in frequency, and vice versa. This is a direct manifestation of the time–frequency uncertainty principle.],
+)
+
+== Properties of the Fourier Transform
+
+The properties below allow transforms of complicated signals to be deduced from simpler known pairs, and are indispensable for solving system analysis problems. Throughout, assume $x(t) arrows.lr^(cal(F)) X(j omega)$ and $y(t) arrows.lr^(cal(F)) Y(j omega)$.
+
+=== Linearity
+
+For constants $a, b in CC$:
+$
+  a x(t) + b y(t) arrows.lr^(cal(F)) a X(j omega) + b Y(j omega).
+$
+*Proof:* The Fourier integral is a linear operation — constants factor out and integrals of sums split. $square$
+
+=== Time Shifting
+
+$
+  x(t - t_0) arrows.lr^(cal(F)) e^(-j omega t_0) X(j omega).
+$
+*Proof:* Substitute $tau = t - t_0$ in the forward transform:
+$
+  integral_(-infinity)^(infinity) x(t - t_0) e^(-j omega t) dif t
+  = integral_(-infinity)^(infinity) x(tau) e^(-j omega (tau + t_0)) dif tau
+  = e^(-j omega t_0) X(j omega). quad square
+$
+Time shifting leaves the *magnitude spectrum unchanged* ($|e^(-j omega t_0) X(j omega)| = |X(j omega)|$) and adds a *linear phase* $-omega t_0$ to the phase spectrum. A delay in time corresponds to a linear phase ramp in frequency.
+
+=== Frequency Shifting (Modulation)
+
+$
+  e^(j omega_0 t) x(t) arrows.lr^(cal(F)) X(j(omega - omega_0)).
+$
+*Proof:* Replace $omega$ with $omega - omega_0$ in the analysis integral:
+$
+  integral_(-infinity)^(infinity) e^(j omega_0 t) x(t) e^(-j omega t) dif t
+  = integral_(-infinity)^(infinity) x(t) e^(-j(omega - omega_0)t) dif t
+  = X(j(omega - omega_0)). quad square
+$
+Multiplication by a complex exponential *shifts the spectrum* by $omega_0$. This is the mathematical basis of *amplitude modulation* in communications.
+
+*Example:* $x(t) cos(omega_0 t) = frac{1}{2}x(t)(e^(j omega_0 t) + e^(-j omega_0 t))$, so
+$
+  cal(F){x(t) cos(omega_0 t)} = frac{1}{2}[X(j(omega - omega_0)) + X(j(omega + omega_0))].
+$
+The spectrum of $x(t)$ is translated to be centred at $plus.minus omega_0$.
+
+=== Time and Frequency Scaling
+
+For real $a eq.not 0$:
+$
+  x(a t) arrows.lr^(cal(F)) frac{1}{|a|} X lr((frac(j omega, a))).
+$
+*Proof:* For $a > 0$, substitute $tau = a t$:
+$
+  integral_(-infinity)^(infinity) x(a t) e^(-j omega t) dif t
+  = frac{1}{a} integral_(-infinity)^(infinity) x(tau) e^(-j (omega\/a) tau) dif tau
+  = frac{1}{a} X lr((frac(j omega, a))).
+$
+For $a < 0$ the limits of integration reverse, introducing a factor $1\/|a|$. $square$
+
+Compressing $x(t)$ in time ($|a| > 1$) expands its spectrum in frequency and reduces its amplitude, and vice versa. This is the *time–bandwidth trade-off*: you cannot simultaneously make a signal narrow in time and narrow in frequency.
+
+=== Time Reversal
+
+Setting $a = -1$ in the scaling property:
+$
+  x(-t) arrows.lr^(cal(F)) X(-j omega) = X^*(j omega), quad x(t) "real."
+$
+Reversing a real signal conjugates its spectrum, flipping the sign of the phase while leaving the magnitude unchanged.
+
+=== Duality
+
+If $x(t) arrows.lr^(cal(F)) X(j omega)$, then
+$
+  X(j t) arrows.lr^(cal(F)) 2pi x(-omega).
+$
+*Proof:* Starting from the inverse transform $x(t) = frac{1}{2pi} integral X(j omega) e^(j omega t) dif omega$, replace $t$ with $-t$ and then swap the roles of $t$ and $omega$. $square$
+
+Duality means every transform pair generates a second pair for free.
+
+*Example:* Since $"rect"(t\/tau) arrows.lr^(cal(F)) tau , "sinc"(omega tau\/2)$, duality gives
+$
+  tau , "sinc"(t tau \/ 2) arrows.lr^(cal(F)) 2pi , "rect"(-omega\/tau) = 2pi , "rect"(omega\/tau).
+$
+A sinc pulse in time has a rectangular (bandlimited) spectrum — it is the ideal low-pass filter impulse response.
+
+=== Differentiation in Time
+
+$
+  frac(dif x(t), dif t) arrows.lr^(cal(F)) j omega X(j omega).
+$
+*Proof:* Differentiate the inverse transform formula under the integral sign:
+$
+  frac(dif, dif t) lr([frac{1}{2pi} integral X(j omega) e^(j omega t) dif omega])
+  = frac{1}{2pi} integral j omega X(j omega) e^(j omega t) dif omega. quad square
+$
+By induction, differentiation $n$ times gives $(j omega)^n X(j omega)$. This property converts a differential equation in $t$ into an *algebraic equation* in $omega$ — the central tool of Fourier-domain system analysis.
+
+=== Integration in Time
+
+$
+  integral_(-infinity)^t x(tau) dif tau arrows.lr^(cal(F)) frac{X(j omega)}{j omega} + pi X(0) delta(omega).
+$
+The $pi X(0) delta(omega)$ term accounts for any nonzero area (DC content) accumulated by the integral as $t arrow.r infinity$.
+
+=== Convolution in Time
+
+$
+  x(t) ast y(t) arrows.lr^(cal(F)) X(j omega) Y(j omega).
+$
+*Proof:* Write the convolution and forward transform, then exchange the order of integration:
+$
+  cal(F){x ast y} &= integral_(-infinity)^(infinity) lr([integral_(-infinity)^(infinity) x(tau) y(t - tau) dif tau]) e^(-j omega t) dif t \
+                  &= integral_(-infinity)^(infinity) x(tau) lr([integral_(-infinity)^(infinity) y(t - tau) e^(-j omega t) dif t]) dif tau \
+                  &= integral_(-infinity)^(infinity) x(tau) e^(-j omega tau) Y(j omega) dif tau \
+                  &= X(j omega) Y(j omega). quad square
+$
+
+#showybox(
+  frame: (
+    border-color: blue.darken(30%),
+    title-color: blue.darken(30%),
+    body-color: blue.lighten(90%),
+  ),
+  title-style: (color: black, weight: "regular", align: left),
+  title: "Key insight",
+  [The convolution theorem is the most important property in system analysis. Convolution in time — a laborious integral — becomes *pointwise multiplication* in frequency. To find a system's output: transform the input, multiply by $H(j omega)$, inverse transform.],
+)
+
+=== Multiplication in Time (Windowing)
+
+$
+  x(t) dot y(t) arrows.lr^(cal(F)) frac{1}{2pi} X(j omega) ast Y(j omega).
+$
+Multiplication in time corresponds to convolution in frequency (with a $1\/2pi$ normalisation). This property underlies *windowing* in spectral analysis: multiplying a signal by a window function $w(t)$ convolves its spectrum with $W(j omega)$, which must be chosen narrow in frequency to minimise spectral leakage.
+
+=== Parseval's Theorem
+
+$
+  integral_(-infinity)^(infinity) |x(t)|^2 dif t = frac{1}{2pi} integral_(-infinity)^(infinity) |X(j omega)|^2 dif omega.
+$
+*Proof:* Apply the multiplication property with $y(t) = x^*(t)$, noting that $cal(F){x^*(t)} = X^*(-j omega)$, then evaluate at $omega = 0$. $square$
+
+Parseval's theorem states that *total signal energy is preserved* by the Fourier transform. The quantity $|X(j omega)|^2\/(2pi)$ is the *energy spectral density* — it describes how the signal's energy is distributed across frequency.
+
+=== Summary Table of Properties
+
+#table(
+  columns: (auto, auto, auto),
+  inset: 8pt,
+  align: (left, left, left),
+  table.header([*Property*], [*Time domain*], [*Frequency domain*]),
+  [Linearity],          [$a x(t) + b y(t)$],                          [$a X(j omega) + b Y(j omega)$],
+  [Time shifting],      [$x(t - t_0)$],                               [$e^(-j omega t_0) X(j omega)$],
+  [Freq. shifting],     [$e^(j omega_0 t) x(t)$],                     [$X(j(omega - omega_0))$],
+  [Time scaling],       [$x(a t)$],                                   [$frac{1}{|a|} X(j omega \/ a)$],
+  [Time reversal],      [$x(-t)$],                                    [$X(-j omega)$],
+  [Duality],            [$X(j t)$],                                   [$2pi x(-omega)$],
+  [Differentiation],    [$dif^n x \/ dif t^n$],                       [$(j omega)^n X(j omega)$],
+  [Integration],        [$integral_(-infinity)^t x dif tau$],         [$X(j omega)\/(j omega) + pi X(0)delta(omega)$],
+  [Convolution],        [$x(t) ast y(t)$],                            [$X(j omega) Y(j omega)$],
+  [Multiplication],     [$x(t) y(t)$],                                [$frac{1}{2pi} X(j omega) ast Y(j omega)$],
+  [Parseval's thm.],    [$integral |x|^2 dif t$],                     [$frac{1}{2pi} integral |X|^2 dif omega$],
+  [Conj. symmetry],     [$x(t)$ real],                                [$X(-j omega) = X^*(j omega)$],
+)
+
+== Frequency Response of LTI Systems
+
+=== The Frequency Response $H(j omega)$
+
+From Chapter 1, the output of an LTI system with impulse response $h(t)$ is the convolution $y(t) = x(t) ast h(t)$. Applying the convolution theorem:
+$
+  Y(j omega) = H(j omega) X(j omega),
+$
+where
+$
+  H(j omega) = integral_(-infinity)^(infinity) h(t) e^(-j omega t) dif t = cal(F){h(t)}.
+$
+$H(j omega)$ is the *frequency response* of the system. It is complex-valued and decomposes as
+$
+  H(j omega) = |H(j omega)| e^(j angle.l H(j omega)),
+$
+where $|H(j omega)|$ is the *gain* (amplitude response) and $angle.l H(j omega)$ is the *phase response* at frequency $omega$. At each frequency $omega$, the system scales the input sinusoidal component by $|H(j omega)|$ and shifts its phase by $angle.l H(j omega)$.
+
+#showybox(
+  frame: (
+    border-color: blue.darken(30%),
+    title-color: blue.darken(30%),
+    body-color: blue.lighten(90%),
+  ),
+  title-style: (color: black, weight: "regular", align: left),
+  title: "Key insight",
+  [The frequency response $H(j omega)$ is the eigenvalue of the LTI system at frequency $omega$ (recall §3.1). System analysis in the frequency domain reduces to: multiply spectra. The convolution integral, which is difficult to compute, is replaced by pointwise multiplication.],
+)
+
+=== Ideal Filters
+
+An *ideal filter* passes certain frequencies without distortion and completely blocks all others. The four ideal filter types are characterised by their frequency responses:
+
+#table(
+  columns: (auto, auto),
+  inset: 8pt,
+  align: (left, left),
+  table.header([*Filter type*], [*Frequency response $H(j omega)$*]),
+  [Low-pass (LPF)],   [$"rect"(omega \/ (2 omega_c))$],
+  [High-pass (HPF)],  [$1 - "rect"(omega \/ (2 omega_c))$],
+  [Band-pass (BPF)],  [$"rect"((omega - omega_c)\/B) + "rect"((omega + omega_c)\/B)$],
+  [Band-stop (BSF)],  [$1 - ["rect"((omega-omega_c)\/B) + "rect"((omega+omega_c)\/B)]$],
+)
+
+where $omega_c$ is the *cutoff frequency* and $B$ is the *bandwidth*.
+
+The impulse response of the ideal LPF is found by taking the inverse Fourier transform of $H(j omega) = "rect"(omega \/ (2 omega_c))$:
+$
+  h(t) = frac{1}{2pi} integral_(-omega_c)^(omega_c) e^(j omega t) dif omega
+        = frac{omega_c}{pi} "sinc"(omega_c t).
+$
+
+#cetz.canvas({
+  import cetz.draw: *
+  import cetz-plot: *
+
+  let sinc(x) = if calc.abs(x) < 0.001 { 1.0 } else { calc.sin(x) / x }
+
+  plot.plot(
+    size: (6, 4),
+    x-tick-step: 2,
+    y-tick-step: 0.5,
+    y-min: -0.5,
+    y-max: 1.3,
+    x-min: -5,
+    x-max: 5,
+    x-label: $omega$,
+    y-label: $H(j omega)$,
+    axis-style: "left",
+    {
+      plot.add(((-5, 0), (-2, 0), (-2, 1), (2, 1), (2, 0), (5, 0)), line: "hv")
+    },
+  )
+
+  cetz.draw.translate((9, 0))
+
+  plot.plot(
+    size: (6, 4),
+    x-tick-step: calc.pi,
+    y-tick-step: 0.5,
+    y-min: -0.5,
+    y-max: 1.3,
+    x-min: -3 * calc.pi,
+    x-max: 3 * calc.pi,
+    x-label: $t$,
+    y-label: $h(t)$,
+    axis-style: "left",
+    {
+      plot.add(
+        domain: (-3 * calc.pi, 3 * calc.pi),
+        t => (t, sinc(2.0 * t) * 2.0 / calc.pi),
+        samples: 300,
+      )
+    },
+  )
+})
+
+#showybox(
+  frame: (
+    border-color: red.darken(50%),
+    title-color: red.darken(50%),
+    body-color: red.lighten(90%),
+  ),
+  title-style: (color: black, weight: "regular", align: left),
+  title: "Note",
+  [The ideal LPF impulse response $h(t) = (omega_c\/pi) "sinc"(omega_c t)$ is nonzero for $t < 0$ — it responds *before* the impulse is applied. This means the ideal LPF is *non-causal* and therefore physically unrealisable. Practical filter design (Chapter 5) constructs causal approximations with a smooth roll-off.],
+)
+
+=== LTI Systems Described by Differential Equations
+
+A broad class of physical systems — electrical circuits, mechanical systems, control loops — is described by linear constant-coefficient ordinary differential equations (LCCODEs) of the form
+$
+  sum_(k=0)^N a_k frac(dif^k y, dif t^k) = sum_(k=0)^M b_k frac(dif^k x, dif t^k).
+$
+Taking the Fourier transform of both sides and applying the differentiation property $(dif^k \/ dif t^k) arrows.lr^(cal(F)) (j omega)^k$:
+$
+  lr((sum_(k=0)^N a_k (j omega)^k)) Y(j omega) = lr((sum_(k=0)^M b_k (j omega)^k)) X(j omega).
+$
+The frequency response is therefore a *rational function* of $j omega$:
+$
+  H(j omega) = frac(Y(j omega), X(j omega)) = frac(sum_(k=0)^M b_k (j omega)^k, sum_(k=0)^N a_k (j omega)^k) = frac(N(j omega), D(j omega)).
+$
+
+==== Worked Example: Series RC Circuit
+
+Consider a series RC circuit with input voltage $x(t)$ applied across the series combination, and output $y(t)$ taken across the capacitor. Kirchhoff's voltage law gives
+$
+  R C frac(dif y(t), dif t) + y(t) = x(t).
+$
+Taking the Fourier transform:
+$
+  j omega R C Y(j omega) + Y(j omega) = X(j omega)
+  quad arrow.r.double quad
+  H(j omega) = frac(1, 1 + j omega R C).
+$
+Let $tau = R C$ (time constant). The magnitude and phase responses are
+$
+  |H(j omega)| = frac{1}{sqrt{1 + (omega tau)^2}}, quad angle.l H(j omega) = -arctan(omega tau).
+$
+
+The gain is 1 at DC, falls to $1\/sqrt{2}$ ($-3$ dB) at $omega_(3"dB") = 1\/tau$, and rolls off as $1\/omega$ for $omega >> 1\/tau$. The phase shifts from $0$ at DC to $-pi\/2$ at high frequency.
+
+Now find the output when the input is $x(t) = e^(-a t) u(t)$ with $a eq.not 1\/tau$:
+$
+  Y(j omega) = H(j omega) X(j omega) = frac{1}{1 + j omega tau} dot frac{1}{a + j omega}.
+$
+Partial fractions (with $b = 1\/tau$):
+$
+  Y(j omega) = frac{1}{(a + j omega)(b + j omega)} = frac{1}{b - a} lr((frac{1}{a + j omega} - frac{1}{b + j omega})).
+$
+Inverse transforming using $1\/(alpha + j omega) arrows.lr^(cal(F)^(-1)) e^(-alpha t) u(t)$:
+$
+  y(t) = frac{1}{b - a} (e^(-a t) - e^(-b t)) u(t) = frac{tau}{1 - a tau} (e^(-a t) - e^(-t\/tau)) u(t).
+$
+
+#cetz.canvas({
+  import cetz.draw: *
+  import cetz-plot: *
+
+  let tau = 1.0
+  let a   = 0.5
+  let b   = 1.0 / tau
+  let y(t) = (1.0 / (b - a)) * (calc.exp(-a * t) - calc.exp(-b * t))
+
+  plot.plot(
+    size: (12, 5),
+    x-tick-step: 1,
+    y-tick-step: 0.2,
+    y-min: -0.05,
+    y-max: 1.1,
+    x-min: -0.5,
+    x-max: 8,
+    x-label: $t$,
+    y-label: "",
+    axis-style: "left",
+    legend: "inner-north-east",
+    {
+      plot.add(
+        domain: (0, 8),
+        t => (t, calc.exp(-a * t)),
+        label: $x(t) = e^(-0.5t)u(t)$,
+      )
+      plot.add(
+        domain: (0, 8),
+        t => (t, y(t)),
+        style: (stroke: (dash: "dashed")),
+        label: $y(t)$,
+      )
+      plot.add(((-0.5, 0), (0, 0)), mark: none)
+    },
+  )
+})
+
+== Signal Transmission and Distortion
+
+When a signal passes through an LTI system the output is $Y(j omega) = H(j omega) X(j omega)$. In general, the system modifies both the amplitude and phase of each frequency component. *Distortion* is any unwanted modification — the goal of this section is to characterise the conditions under which a system transmits a signal faithfully.
+
+=== Distortionless Transmission
+
+A system transmits $x(t)$ *without distortion* if the output is a scaled, delayed replica:
+$
+  y(t) = K x(t - t_0), quad K > 0, quad t_0 in RR.
+$
+Taking the Fourier transform of both sides:
+$
+  Y(j omega) = K e^(-j omega t_0) X(j omega).
+$
+Comparing with $Y(j omega) = H(j omega) X(j omega)$, the condition for distortionless transmission is
+$
+  H(j omega) = K e^(-j omega t_0).
+$
+This requires:
+- *Flat magnitude response:* $|H(j omega)| = K$ for all $omega$ — every frequency is amplified by the same gain.
+- *Linear phase response:* $angle.l H(j omega) = -omega t_0$ — the phase shifts linearly with frequency.
+
+Any deviation from these conditions introduces distortion. Two types are distinguished:
+
+- *Amplitude distortion:* $|H(j omega)|$ is not constant — different frequencies are amplified by different amounts, changing the relative sizes of spectral components.
+- *Phase distortion:* $angle.l H(j omega)$ is not linear — different frequencies are delayed by different amounts, disrupting the temporal alignment of spectral components.
+
+#showybox(
+  frame: (
+    border-color: red.darken(50%),
+    title-color: red.darken(50%),
+    body-color: red.lighten(90%),
+  ),
+  title-style: (color: black, weight: "regular", align: left),
+  title: "Note",
+  [A system can have a flat magnitude response yet still distort if its phase is nonlinear. Phase distortion is often perceptually significant in audio and communications but invisible to power-spectrum measurements — this is why phase response must always be checked alongside magnitude response.],
+)
+
+=== Group Delay
+
+For a system with phase response $angle.l H(j omega)$, the *group delay* is defined as
+$
+  tau_g (omega) = -frac(dif , dif omega) angle.l H(j omega).
+$
+Group delay measures the time delay experienced by the *envelope* of a narrowband signal centred at frequency $omega$. It generalises the concept of delay to systems whose phase is not exactly linear.
+
+The distortionless condition $angle.l H(j omega) = -omega t_0$ is equivalent to *constant group delay* $tau_g(omega) = t_0$ for all $omega$: every narrowband component of the signal is delayed by the same amount, so the envelope shape is preserved.
+
+==== Worked Example: RC Lowpass Filter
+
+Returning to the first-order RC filter $H(j omega) = 1\/(1 + j omega tau)$, the phase is
+$
+  angle.l H(j omega) = -arctan(omega tau).
+$
+The group delay is
+$
+  tau_g(omega) = -frac(dif, dif omega)(-arctan(omega tau)) = frac(tau, 1 + (omega tau)^2).
+$
+
+#cetz.canvas({
+  import cetz.draw: *
+  import cetz-plot: *
+
+  plot.plot(
+    size: (6, 4),
+    x-tick-step: 1,
+    y-tick-step: 0.5,
+    y-min: -0.1,
+    y-max: 1.3,
+    x-min: 0,
+    x-max: 5,
+    x-label: $omega tau$,
+    y-label: $|H(j omega)|$,
+    axis-style: "left",
+    {
+      plot.add(
+        domain: (0, 5),
+        t => (t, 1.0 / calc.sqrt(1.0 + t * t)),
+        samples: 200,
+      )
+    },
+  )
+
+  cetz.draw.translate((9, 0))
+
+  plot.plot(
+    size: (6, 4),
+    x-tick-step: 1,
+    y-tick-step: 0.2,
+    y-min: -0.05,
+    y-max: 1.1,
+    x-min: 0,
+    x-max: 5,
+    x-label: $omega tau$,
+    y-label: $tau_g \/ tau$,
+    axis-style: "left",
+    {
+      plot.add(
+        domain: (0, 5),
+        t => (t, 1.0 / (1.0 + t * t)),
+        samples: 200,
+      )
+    },
+  )
+})
+
+The group delay equals $tau$ at DC and falls monotonically toward zero at high frequency. Because $tau_g(omega)$ is not constant, the RC filter is a *dispersive* system — it delays low-frequency components of the envelope more than high-frequency ones, spreading pulses in time. This is the mechanism behind pulse broadening in dispersive transmission media such as optical fibres.
+
+#showybox(
+  frame: (
+    border-color: blue.darken(30%),
+    title-color: blue.darken(30%),
+    body-color: blue.lighten(90%),
+  ),
+  title-style: (color: black, weight: "regular", align: left),
+  title: "Key insight",
+  [Distortionless transmission requires *linear phase* (equivalently, *constant group delay*). A flat magnitude response alone is not sufficient. Systems with linear phase — such as symmetric FIR filters in the discrete-time setting — are therefore highly desirable whenever waveform shape must be preserved.],
+)
+
+== Energy Spectral Density
+
+=== Definition
+
+From Parseval's theorem the total energy of $x(t)$ is
+$
+  E_x = integral_(-infinity)^(infinity) |x(t)|^2 dif t = frac{1}{2pi} integral_(-infinity)^(infinity) |X(j omega)|^2 dif omega.
+$
+The integrand on the right, $|X(j omega)|^2 \/ (2pi)$, describes how the signal's energy is *distributed across frequency*. It is called the *energy spectral density (ESD)*:
+$
+  S_x (omega) = |X(j omega)|^2,
+$
+so that
+$
+  E_x = frac{1}{2pi} integral_(-infinity)^(infinity) S_x (omega) dif omega.
+$
+$S_x(omega)$ has units of energy per unit angular frequency (J·s/rad). For a real signal $x(t)$, conjugate symmetry gives $|X(-j omega)| = |X(j omega)|$, so $S_x(omega)$ is an even function of $omega$.
+
+=== Energy in a Frequency Band
+
+The energy contained in the band $omega_1 lt.eq |omega| lt.eq omega_2$ is
+$
+  E_(omega_1, omega_2) = frac{1}{2pi} lr([integral_(-omega_2)^(-omega_1) + integral_(omega_1)^(omega_2)]) S_x(omega) dif omega
+                       = frac{1}{pi} integral_(omega_1)^(omega_2) S_x(omega) dif omega,
+$
+where the last equality uses the even symmetry of $S_x(omega)$.
+
+=== Bandwidth Definitions
+
+Several definitions of signal *bandwidth* are in common use, each suited to different contexts:
+
+#table(
+  columns: (auto, auto),
+  inset: 8pt,
+  align: (left, left),
+  table.header([*Definition*], [*Condition*]),
+  [3 dB bandwidth $B_(3"dB")$],       [$S_x(omega) = S_x(0)\/2$, i.e. $|X(j omega)| = |X(0)|\/ sqrt{2}$],
+  [Null-to-null bandwidth $B_"null"$], [Distance from DC to first spectral null of $|X(j omega)|$],
+  [RMS (Gabor) bandwidth $B_"rms"$],  [$B_"rms"^2 = frac{1}{E_x} frac{1}{2pi} integral omega^2 S_x(omega) dif omega$],
+)
+
+Each definition gives the same answer for a Gaussian signal (since Gaussians are their own Fourier transforms) but can differ significantly for other shapes.
+
+=== Worked Example
+
+Find the ESD, total energy, and 3 dB bandwidth of $x(t) = e^(-a t) u(t)$, $a > 0$.
+
+*Step 1 — ESD:* From §4.3, $X(j omega) = 1\/(a + j omega)$, so
+$
+  S_x(omega) = |X(j omega)|^2 = frac{1}{a^2 + omega^2}.
+$
+
+*Step 2 — Total energy:*
+$
+  E_x = frac{1}{2pi} integral_(-infinity)^(infinity) frac{1}{a^2 + omega^2} dif omega.
+$
+Using the standard result $integral_(-infinity)^infinity dif omega\/(alpha^2 + omega^2) = pi\/alpha$:
+$
+  E_x = frac{1}{2pi} dot frac{pi}{a} = frac{1}{2a}.
+$
+This matches the direct time-domain calculation: $E_x = integral_0^infinity e^(-2a t) dif t = 1\/(2a)$. $checkmark$
+
+*Step 3 — 3 dB bandwidth:* The ESD at DC is $S_x(0) = 1\/a^2$. Setting $S_x(omega_c) = S_x(0)\/2$:
+$
+  frac{1}{a^2 + omega_c^2} = frac{1}{2 a^2}
+  quad arrow.r.double quad
+  omega_c = a " rad/s."
+$
+
+#cetz.canvas({
+  import cetz.draw: *
+  import cetz-plot: *
+
+  let a = 1.0
+
+  plot.plot(
+    size: (12, 5),
+    x-tick-step: 1,
+    y-tick-step: 0.2,
+    y-min: -0.05,
+    y-max: 1.1,
+    x-min: -5,
+    x-max: 5,
+    x-label: $omega \/ a$,
+    y-label: $a^2 S_x(omega)$,
+    axis-style: "left",
+    legend: "inner-north-east",
+    {
+      plot.add(
+        domain: (-5, 5),
+        t => (t, 1.0 / (1.0 + t * t)),
+        samples: 300,
+        label: $S_x(omega)$,
+      )
+      plot.add(
+        ((-5, 0.5), (5, 0.5)),
+        style: (stroke: (dash: "dashed", paint: red)),
+        label: [3 dB level],
+      )
+      plot.add(
+        ((-1, 0), (-1, 0.5)),
+        style: (stroke: (paint: red)),
+      )
+      plot.add(
+        ((1, 0), (1, 0.5)),
+        style: (stroke: (paint: red)),
+      )
+    },
+  )
+})
+
+A larger $a$ (faster decay in time) gives a wider ESD ($omega_c = a$ increases) — again the time–bandwidth trade-off: a signal that is short-lived in time is necessarily broad in frequency.
+
+=== ESD and the Autocorrelation Function
+
+The ESD is also the Fourier transform of the *autocorrelation function* $R_x(tau)$:
+$
+  R_x (tau) = integral_(-infinity)^(infinity) x(t) x(t + tau) dif t arrows.lr^(cal(F)) S_x(omega) = |X(j omega)|^2.
+$
+This relationship (the *Wiener–Khinchin theorem* for energy signals) is useful when the ESD must be estimated from a signal without direct access to $X(j omega)$.
+
 = Butterworth Filter Design
 
 = Nyquist's Sampling Theorem
