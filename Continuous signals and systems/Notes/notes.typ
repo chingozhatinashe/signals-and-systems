@@ -2898,5 +2898,99 @@ The ZOH (blue) produces a staircase waveform; sinc interpolation (red dashed) re
   [The ideal sinc interpolator is non-causal (it requires all future samples) and therefore unrealisable in real time. Practical systems use causal FIR or IIR interpolation filters that approximate the sinc over a finite window, trading off reconstruction accuracy against filter complexity and latency.],
 )
 
+== Practical Considerations
+
+=== Anti-Aliasing Filter
+
+No real-world signal is strictly band-limited — energy always extends to arbitrarily high frequencies. Before an ADC can sample a signal without aliasing, a low-pass *anti-aliasing filter* must attenuate all frequency content above $omega_s\/2$ to a negligible level. The system chain is therefore:
+
+#diagram(
+  spacing: 10pt,
+  node-stroke: 2pt,
+  edge-stroke: 1pt,
+  node((0, 1), [$x(t)$], stroke: 0pt, name: <in>),
+  node((5, 1), [Anti-alias\ LPF], width: 22mm, height: 14mm, name: <F>),
+  node((11, 1), [ADC\ sampler], width: 22mm, height: 14mm, name: <S>),
+  node((17, 1), [$x[n]$], stroke: 0pt, name: <out>),
+  edge(<in>, <F>, "-|>"),
+  edge(<F>, <S>, "-|>"),
+  edge(<S>, <out>, "-|>"),
+)
+
+The filter cutoff $omega_c$ and the sampling rate $omega_s$ must be chosen jointly: a higher $omega_s$ widens the transition band $[omega_c, omega_s - omega_c]$, allowing a lower-order (simpler) anti-aliasing filter for the same stopband attenuation.
+
+==== Worked Example: Anti-Aliasing Filter Design
+
+*Problem.* An audio signal occupies 0–4 kHz. Choose a sampling rate and design a Butterworth anti-aliasing LPF such that:
+- Passband: $|H| gt.eq -1$ dB for $f lt.eq 4$ kHz
+- Stopband: $|H| lt.eq -40$ dB for $f gt.eq f_s\/2$
+
+*Step 1 — Choose the sampling rate.* Select $f_s = 10$ kHz (2.5× the signal bandwidth). The Nyquist frequency is $f_s\/2 = 5$ kHz, giving a 1 kHz transition band $[4, 5]$ kHz.
+
+*Step 2 — Filter specification.*
+$
+  omega_p = 2pi times 4000 " rad/s," quad R_p = 1 " dB;"
+  quad omega_s = 2pi times 5000 " rad/s," quad A_s = 40 " dB."
+$
+
+*Step 3 — Compute the Butterworth order.*
+$
+  n gt.eq frac(log lr((frac(10^4 - 1, 10^0.1 - 1))), 2 log (5000\/4000))
+        = frac(log(9999\/0.2589), 2 log(1.25))
+        approx frac(4.587, 0.194)
+        approx 23.6.
+$
+Round up: $bold(n = 24)$.
+
+*Step 4 — Determine the cutoff frequency.* Using passband-edge design ($R_p = 1$ dB exactly at $omega_p$):
+$
+  omega_c = frac(omega_p, (10^(R_p\/10) - 1)^(1\/(2n)))
+          = frac(2pi times 4000, (0.2589)^(1\/48))
+          approx 2pi times 4000 times 1.030
+          approx 2pi times 4120 " rad/s."
+$
+
+*Step 5 — Verify stopband attenuation* at $omega = 2pi times 5000$ rad/s:
+$
+  Omega_s = frac(omega_s, omega_c) approx frac(5000, 4120) approx 1.214,
+  quad |H_(24)(j Omega_s)| = frac(1, sqrt(1 + 1.214^48)) approx frac(1, sqrt(1.4 times 10^4)) approx 0.0085,
+$
+giving $20 log_10(0.0085) approx -41.4$ dB $< -40$ dB. $checkmark$
+
+*Step 6 — Design trade-off.* Increasing $f_s$ to 20 kHz doubles the transition band to $[4, 10]$ kHz. Re-applying the order formula:
+$
+  n gt.eq frac(log(9999\/0.2589), 2 log(10000\/4000)) approx frac(4.587, 0.796) approx 5.76 arrow.r n = 6.
+$
+A four-fold increase in sampling rate reduces the filter order from 24 to 6 — a dramatic simplification at the cost of more ADC speed and storage.
+
+#showybox(
+  frame: (
+    border-color: red.darken(50%),
+    title-color: red.darken(50%),
+    body-color: red.lighten(90%),
+  ),
+  title-style: (color: black, weight: "regular", align: left),
+  title: "Note",
+  [The joint choice of $f_s$ and filter order is a fundamental system design trade-off. A higher sampling rate relaxes the anti-aliasing filter requirements — each doubling of $f_s$ roughly halves the required filter order. In high-volume consumer electronics (audio codecs, sensor front-ends) this trade-off drives the choice of oversampling ratio.],
+)
+
+=== Oversampling
+
+Sampling well above the Nyquist rate — *oversampling* by a factor $M = f_s \/ (2 f_M)$ — has two practical benefits beyond relaxing the anti-aliasing filter:
+
++ *Reduced quantisation noise in band.* If the ADC introduces quantisation noise with power spectral density spread uniformly from $0$ to $f_s\/2$, oversampling by $M$ reduces the in-band noise power by a factor $M$ (equivalently $10 log_10 M$ dB), gaining approximately $1.76$ dB per octave of oversampling — equivalent to half an extra bit of resolution per octave.
++ *Simpler reconstruction filter.* On the DAC side, a higher $f_s$ means the spectral images (replicas) are farther from the baseband, so the post-DAC smoothing filter has a wider transition band and can be lower order.
+
+#showybox(
+  frame: (
+    border-color: blue.darken(30%),
+    title-color: blue.darken(30%),
+    body-color: blue.lighten(90%),
+  ),
+  title-style: (color: black, weight: "regular", align: left),
+  title: "Key insight",
+  [CD audio uses $f_s = 44.1$ kHz for a 20 kHz audio band — an oversampling factor of $M = 44100\/(2 times 20000) = 1.1$, barely above Nyquist. Modern players upsample to 176.4 kHz or 352.8 kHz (4× or 8× oversampling) in software before the DAC, dramatically simplifying the analogue reconstruction filter while improving noise performance.],
+)
+
 = State-Space Analysis
 
