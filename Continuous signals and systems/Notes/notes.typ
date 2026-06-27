@@ -1981,6 +1981,103 @@ The figure below illustrates the specification regions. The shaded areas are *fo
   [A common special case is $R_p = 3$ dB, giving $epsilon.alt = 1$. This places the passband edge exactly at the half-power point and is the convention used in Butterworth design tables — the normalised cutoff $Omega = 1$ always corresponds to a $-3$ dB attenuation.],
 )
 
+== The Butterworth Approximation
+
+=== Maximally Flat Magnitude Response
+
+The Butterworth filter of order $n$ is defined by the magnitude-squared response
+$
+  |H_n (j Omega)|^2 = frac(1, 1 + Omega^(2n)),
+$
+where $Omega = omega \/ omega_c$ is the frequency normalised to the $-3$ dB cutoff $omega_c$. Three properties follow immediately:
+
++ $|H_n (j 0)| = 1$: unity DC gain for all orders.
++ $|H_n (j 1)| = 1\/sqrt(2)$: the $-3$ dB point is always at $Omega = 1$, regardless of $n$.
++ $|H_n (j Omega)|$ is monotonically decreasing in $Omega$ — there is no ripple anywhere.
+
+The response is said to be *maximally flat* at $Omega = 0$ because all derivatives $dif^k |H_n|^2 \/ dif Omega^k$ vanish at $Omega = 0$ for $k = 1, 2, dots, 2n-1$. No other all-pole filter of the same order achieves a flatter passband near DC.
+
+#showybox(
+  frame: (
+    border-color: blue.darken(30%),
+    title-color: blue.darken(30%),
+    body-color: blue.lighten(90%),
+  ),
+  title-style: (
+    color: black,
+    weight: "regular",
+    align: left,
+  ),
+  title: "Key insight",
+  ["Maximally flat" means no passband ripple — the magnitude response hugs unity as long as possible before rolling off. The trade-off is that the transition from passband to stopband is smooth and gradual rather than sharp. Filters that allow passband ripple (Chebyshev, elliptic) achieve a steeper roll-off for the same order.],
+)
+
+#cetz.canvas({
+  import cetz.draw: *
+  import cetz-plot: *
+
+  let bw(x, n) = 1.0 / calc.sqrt(1.0 + calc.pow(x, 2 * n))
+
+  plot.plot(
+    size: (12, 5),
+    x-tick-step: 0.5,
+    y-tick-step: 0.2,
+    y-min: -0.05,
+    y-max: 1.15,
+    x-min: 0,
+    x-max: 3,
+    x-label: $Omega = omega \/ omega_c$,
+    y-label: $|H_n (j Omega)|$,
+    axis-style: "left",
+    legend: "inner-north-east",
+    {
+      plot.add(
+        domain: (0, 3), t => (t, bw(t, 1)), samples: 200, label: $n = 1$,
+      )
+      plot.add(
+        domain: (0, 3), t => (t, bw(t, 2)), samples: 200,
+        style: (stroke: (dash: "dashed")), label: $n = 2$,
+      )
+      plot.add(
+        domain: (0, 3), t => (t, bw(t, 3)), samples: 200,
+        style: (stroke: (paint: blue)), label: $n = 3$,
+      )
+      plot.add(
+        domain: (0, 3), t => (t, bw(t, 5)), samples: 200,
+        style: (stroke: (paint: red)), label: $n = 5$,
+      )
+      plot.add(
+        ((0, 1.0 / calc.sqrt(2.0)), (3, 1.0 / calc.sqrt(2.0))),
+        style: (stroke: (dash: "dotted", paint: gray)),
+        mark: none,
+      )
+    },
+  )
+})
+
+=== Roll-off Rate
+
+For $Omega >> 1$ the $Omega^(2n)$ term dominates the denominator and
+$
+  |H_n (j Omega)| approx Omega^(-n).
+$
+In dB this is $-20n log_10 Omega$, giving a high-frequency roll-off of *$-20n$ dB per decade* (equivalently $-6n$ dB per octave). Each additional pole therefore contributes an extra 20 dB/decade of attenuation.
+
+#showybox(
+  frame: (
+    border-color: red.darken(50%),
+    title-color: red.darken(50%),
+    body-color: red.lighten(90%),
+  ),
+  title-style: (
+    color: black,
+    weight: "regular",
+    align: left,
+  ),
+  title: "Note",
+  [The roll-off rate of $-20n$ dB/decade only applies well into the stopband ($Omega >> 1$). In the transition band the actual slope is shallower. When checking whether a design meets spec, always evaluate $|H_n (j Omega)|$ directly at $omega_s$ rather than relying on the asymptotic rate.],
+)
+
 = Nyquist's Sampling Theorem
 
 = State-Space Analysis
