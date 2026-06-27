@@ -2992,5 +2992,56 @@ Sampling well above the Nyquist rate — *oversampling* by a factor $M = f_s \/ 
   [CD audio uses $f_s = 44.1$ kHz for a 20 kHz audio band — an oversampling factor of $M = 44100\/(2 times 20000) = 1.1$, barely above Nyquist. Modern players upsample to 176.4 kHz or 352.8 kHz (4× or 8× oversampling) in software before the DAC, dramatically simplifying the analogue reconstruction filter while improving noise performance.],
 )
 
+== Summary
+
+The key results of this chapter are collected below.
+
+#table(
+  columns: (auto, 1fr),
+  inset: 8pt,
+  align: (left, left),
+  table.header([*Concept*], [*Result*]),
+  [Sampled signal spectrum],   [$X_s (j omega) = frac(1, T_s) sum_k X(j(omega - k omega_s))$ — periodic replication with spacing $omega_s$],
+  [Nyquist condition],         [$omega_s gt.eq 2 omega_M$ — sampling rate must be at least twice the signal bandwidth],
+  [Nyquist rate],              [$f_s = 2 f_M$ — the minimum sampling frequency for a band-limited signal],
+  [Aliasing],                  [Occurs when $omega_s < 2 omega_M$; component at $f_0$ folds to $f_0 - k f_s$; irreversible],
+  [Ideal reconstruction],      [Ideal LPF with gain $T_s$ and cutoff $omega_s\/2$; equivalent to sinc interpolation],
+  [Zero-order hold],           [$H_"ZOH" (j omega) = T_s "sinc"(omega T_s\/2) e^(-j omega T_s\/2)$; requires post-filter correction],
+  [Anti-aliasing filter],      [Butterworth LPF before the ADC; order and $f_s$ chosen jointly],
+  [Oversampling],              [Factor $M$ reduces in-band quantisation noise by $10 log_10 M$ dB; relaxes filter order],
+)
+
+The complete analogue-to-digital-to-analogue signal chain is:
+
+#diagram(
+  spacing: 8pt,
+  node-stroke: 2pt,
+  edge-stroke: 1pt,
+  node((0, 1), [$x(t)$], stroke: 0pt, name: <in>),
+  node((4, 1), [Anti-alias\ LPF], width: 22mm, height: 14mm, name: <aa>),
+  node((9, 1), [ADC], width: 16mm, height: 14mm, name: <adc>),
+  node((13, 1), [DSP], width: 16mm, height: 14mm, name: <dsp>),
+  node((17, 1), [DAC\ (ZOH)], width: 18mm, height: 14mm, name: <dac>),
+  node((22, 1), [Recon.\ filter], width: 22mm, height: 14mm, name: <rf>),
+  node((26, 1), [$y(t)$], stroke: 0pt, name: <out>),
+  edge(<in>, <aa>, "-|>"),
+  edge(<aa>, <adc>, "-|>"),
+  edge(<adc>, <dsp>, "-|>"),
+  edge(<dsp>, <dac>, "-|>"),
+  edge(<dac>, <rf>, "-|>"),
+  edge(<rf>, <out>, "-|>"),
+)
+
+#showybox(
+  frame: (
+    border-color: blue.darken(30%),
+    title-color: blue.darken(30%),
+    body-color: blue.lighten(90%),
+  ),
+  title-style: (color: black, weight: "regular", align: left),
+  title: "Key insight",
+  [The Nyquist theorem is the theoretical foundation for all digital signal processing. It guarantees that a band-limited continuous-time signal loses no information when sampled at or above the Nyquist rate, making the conversion between analogue and digital domains lossless in principle. Every practical ADC/DAC system — audio, communications, medical imaging, instrumentation — is designed around this result.],
+)
+
 = State-Space Analysis
 
