@@ -3045,3 +3045,640 @@ The complete analogue-to-digital-to-analogue signal chain is:
 
 = State-Space Analysis
 
+Chapters 2–5 characterised systems entirely by their transfer function $H(s)$ or frequency response $H(j omega)$ — an input-output relationship that reveals nothing about what is happening inside the system. For simple single-loop systems driven from rest this is perfectly adequate, but as systems grow in complexity — multiple interconnected loops, several inputs and outputs, arbitrary initial conditions — the transfer function description becomes unwieldy or incomplete. State-space analysis is an alternative mathematical framework that captures the complete internal dynamics of a system using a compact set of first-order differential equations. It is the language of modern control theory and underpins the design of everything from aircraft autopilots to implantable cardiac devices.
+
+== Introduction
+
+=== Why State-Space?
+
+The transfer function $H(s) = Y(s)\/U(s)$ is defined under zero initial conditions and describes only the zero-state response. If the system starts with stored energy — charge on a capacitor, current in an inductor — that energy is invisible to $H(s)$. Furthermore, a single scalar transfer function cannot directly represent a system with multiple inputs and outputs (MIMO). State-space overcomes both limitations:
+
+- *Initial conditions* enter naturally through the initial state vector $bold(x)(0)$, giving access to the complete (zero-input plus zero-state) response.
+- *MIMO systems* are handled by replacing the scalar input and output with vectors and making $bold(B)$, $bold(C)$ rectangular.
+- The framework supports direct *numerical simulation* — standard solvers integrate the first-order vector ODE step by step.
+- *Structural properties* such as controllability and observability, which determine whether a system can be driven or identified from measurements, have no counterpart in the transfer function picture.
+
+=== The Concept of State
+
+The *state* of a system at time $t_0$ is the minimum set of variables $x_1(t_0), x_2(t_0), dots, x_n(t_0)$ that, together with the input $u(t)$ for $t >= t_0$, uniquely determines the future output $y(t)$ for all $t >= t_0$. The state encodes everything the system "remembers" about its past. For electrical circuits the natural state variables are the capacitor voltages and inductor currents because these quantities store energy and cannot change instantaneously. An $n$th-order system has exactly $n$ independent state variables, collected into the *state vector*
+$
+  bold(x)(t) = vec(x_1(t), x_2(t), dots.v, x_n(t)) in RR^n.
+$
+
+=== Standard Form
+
+The state-space representation of a continuous-time LTI system with one input and one output consists of two vector equations:
+$
+  dot(bold(x))(t) &= bold(A) bold(x)(t) + bold(b) u(t) quad & "(state equation)" \
+           y(t)   &= bold(c)^TT bold(x)(t) + d, u(t)  quad & "(output equation)"
+$
+
+#showybox(
+  frame: (
+    border-color: red.darken(50%),
+    title-color: red.darken(50%),
+    body-color: red.lighten(90%),
+  ),
+  title-style: (color: black, weight: "regular", align: left),
+  title: "Note",
+  [The SISO notation above uses lowercase $bold(b)$ (column vector) and $bold(c)^TT$ (row vector) for the input and output matrices. Many textbooks write the same equations using uppercase $bold(B)$ and $bold(C)$ to keep the notation uniform for MIMO generalisation. Both conventions appear in the literature; this chapter uses the uppercase form for consistency.],
+)
+
+Adopting the uppercase convention throughout:
+
+#table(
+  columns: (auto, auto, 1fr),
+  inset: 8pt,
+  align: (left, center, left),
+  table.header([*Matrix*], [*Size*], [*Role*]),
+  [$bold(A)$], [$n times n$], [System (or state) matrix — governs the autonomous dynamics],
+  [$bold(B)$], [$n times 1$], [Input matrix — distributes the scalar input across state derivatives],
+  [$bold(C)$], [$1 times n$], [Output matrix — selects an observable linear combination of the state],
+  [$D$],       [$1 times 1$], [Feedthrough scalar — direct coupling from input to output],
+)
+
+The block diagram below shows how the four matrices combine to form a closed-loop signal-flow structure. The integrator block labelled $bold(I)\/s$ represents component-wise integration of the state derivative to recover $bold(x)(t)$.
+
+#diagram(
+  spacing: 9pt,
+  node-stroke: 2pt,
+  edge-stroke: 1pt,
+  node((0, 0), [$u(t)$], stroke: 0pt, name: <u>),
+  node((3, 0), [$bold(B)$], width: 12mm, height: 10mm, name: <B>),
+  node((6, 0), [$+$], shape: circle, width: 7mm, name: <sum>),
+  node((9.5, 0), [$bold(I)\/s$], width: 14mm, height: 10mm, name: <int>),
+  node((13, 0), [$bold(C)$], width: 12mm, height: 10mm, name: <C>),
+  node((17, 0), [$+$], shape: circle, width: 7mm, name: <sum2>),
+  node((20, 0), [$y(t)$], stroke: 0pt, name: <y>),
+  node((9.5, 2.5), [$bold(A)$], width: 12mm, height: 10mm, name: <A>),
+  node((3, 2.5), [$D$], width: 12mm, height: 10mm, name: <D>),
+  edge(<u>, <B>, "-|>"),
+  edge(<B>, <sum>, "-|>"),
+  edge(<sum>, <int>, "-|>"),
+  edge(<int>, <C>, "-|>", [$bold(x)(t)$], label-pos: 0.5),
+  edge(<C>, <sum2>, "-|>"),
+  edge(<sum2>, <y>, "-|>"),
+  edge((11.5, 0), (11.5, 2.5), <A>, "-|>"),
+  edge(<A>, (6, 2.5), (6, 0.4), "-|>"),
+  edge((1.5, 0), (1.5, 2.5), <D>, "-|>"),
+  edge(<D>, (17, 2.5), (17, 0.4), "-|>"),
+)
+
+#showybox(
+  frame: (
+    border-color: blue.darken(30%),
+    title-color: blue.darken(30%),
+    body-color: blue.lighten(90%),
+  ),
+  title-style: (color: black, weight: "regular", align: left),
+  title: "Key insight",
+  [The state-space representation is a *complete* system description: given $bold(x)(t_0)$ and $u(t)$ for $t >= t_0$, every future value of $bold(x)$ and $y$ is determined. The transfer function is a special case — it corresponds to the zero-initial-condition, single-input-single-output situation and can always be derived from the state-space matrices, but the reverse is not unique.],
+)
+
+== Deriving State-Space Equations
+
+=== Selecting State Variables
+
+For a circuit containing $n$ independent energy-storage elements (capacitors and inductors), choose exactly one state variable per element:
+
+- Assign $x_k = v_{C_k}$ for the $k$th capacitor voltage.
+- Assign $x_k = i_{L_k}$ for the $k$th inductor current.
+
+These variables satisfy first-order constitutive relations ($i_C = C dot(v)_C$ and $v_L = L dot(i)_L$) that translate directly into state equations. Dependent sources and ideal transformers may reduce the count of independent state variables, but for the standard RLC circuits studied here each storage element contributes exactly one state variable.
+
+=== From an $n$th-Order ODE
+
+Any linear constant-coefficient ODE of order $n$
+$
+  y^((n)) + a_(n-1) y^((n-1)) + dots + a_1 dot(y) + a_0 y = b_0 u
+$
+can be converted to state-space form by defining the state variables as successive derivatives of the output: $x_1 = y$, $x_2 = dot(y)$, $dots$, $x_n = y^((n-1))$. The equations $dot(x)_k = x_(k+1)$ for $k = 1, dots, n-1$ and the ODE itself give the *controllable canonical form*:
+$
+  bold(A) = mat(delim: "[",
+    0, 1, 0, dots.h, 0;
+    0, 0, 1, dots.h, 0;
+    dots.v, dots.v, dots.v, dots.down, dots.v;
+    0, 0, 0, dots.h, 1;
+    -a_0, -a_1, -a_2, dots.h, -a_(n-1)
+  ), quad
+  bold(B) = mat(delim: "[", 0; 0; dots.v; 0; b_0), quad
+  bold(C) = mat(delim: "[", 1, 0, dots.h, 0), quad
+  D = 0.
+$
+The bottom row of $bold(A)$ contains the (negated) ODE coefficients; $bold(C)$ simply reads off the first state variable $y$. This form always arises naturally from the ODE and will reappear in Section 5 on canonical forms.
+
+=== Worked Example: Series RLC Circuit
+
+Consider the series RLC circuit driven by a voltage source $v_s(t)$. The output is taken as the capacitor voltage $v_C(t)$.
+
+#diagram(
+  spacing: 8pt,
+  node-stroke: 2pt,
+  edge-stroke: 1pt,
+  node((0, 1), [$v_s(t)$], stroke: 0pt, name: <vs>),
+  node((3, 1), [$R$], width: 12mm, height: 10mm, name: <R>),
+  node((6.5, 1), [$L$], width: 12mm, height: 10mm, name: <L>),
+  node((10, 1), [$C$], width: 12mm, height: 10mm, name: <C>),
+  node((13, 1), [$v_C$], stroke: 0pt, name: <out>),
+  edge(<vs>, <R>, "-|>", [$i_L(t)$], label-pos: 0.5),
+  edge(<R>, <L>, "-|>"),
+  edge(<L>, <C>, "-|>"),
+  edge(<C>, <out>, "--"),
+)
+
+Choose state variables $x_1 = v_C$ and $x_2 = i_L$ (the loop current). The capacitor constitutive relation gives
+$
+  dot(x)_1 = frac(i_L, C) = frac(x_2, C).
+$
+Applying KVL around the single loop:
+$
+  v_s = R i_L + L frac(dif i_L, dif t) + v_C
+  quad => quad
+  dot(x)_2 = frac(dif i_L, dif t) = -frac(1, L) x_1 - frac(R, L) x_2 + frac(1, L) v_s.
+$
+The output equation is simply $y = v_C = x_1$. Collecting into matrix form:
+$
+  underbrace(mat(delim: "[", dot(x)_1; dot(x)_2), dot(bold(x)))
+  = underbrace(mat(delim: "[", 0, 1\/C; -1\/L, -R\/L), bold(A))
+    underbrace(mat(delim: "[", x_1; x_2), bold(x))
+  + underbrace(mat(delim: "[", 0; 1\/L), bold(B)) v_s,
+  quad quad
+  y = underbrace(mat(delim: "[", 1, 0), bold(C)) bold(x).
+$
+The system is second-order ($n = 2$), has one input, one output, and $D = 0$ (the source does not feed directly to the output capacitor). The eigenvalues of $bold(A)$ — which determine the natural frequencies — satisfy $lambda^2 + (R\/L) lambda + 1\/(L C) = 0$, the familiar characteristic equation of a series RLC circuit.
+
+=== Worked Example: Parallel RLC Circuit
+
+A current source $i_s(t)$ drives a parallel combination of $R$, $L$, and $C$. The output is the inductor current $i_L(t)$.
+
+Let $x_1 = v$ (common node voltage) and $x_2 = i_L$. KCL at the top node:
+$
+  C frac(dif v, dif t) = i_s - frac(v, R) - i_L
+  quad => quad
+  dot(x)_1 = -frac(1, R C) x_1 - frac(1, C) x_2 + frac(1, C) i_s.
+$
+The inductor constitutive relation gives
+$
+  dot(x)_2 = frac(v, L) = frac(1, L) x_1.
+$
+In matrix form:
+$
+  bold(A) = mat(delim: "[", -1\/(R C), -1\/C; 1\/L, 0), quad
+  bold(B) = mat(delim: "[", 1\/C; 0), quad
+  bold(C) = mat(delim: "[", 0, 1), quad D = 0.
+$
+This contrasts with the series case: the output matrix $bold(C)$ now reads off the second state variable $i_L$ rather than the first. The characteristic polynomial $det(lambda bold(I) - bold(A)) = lambda^2 + lambda\/(R C) + 1\/(L C)$ matches the standard parallel RLC result.
+
+== Solution of State-Space Equations
+
+Having written the state equation $dot(bold(x)) = bold(A) bold(x) + bold(B) u$, we now find $bold(x)(t)$ in closed form. The solution decomposes into two parts: the *zero-input response*, driven entirely by initial conditions $bold(x)(0)$, and the *zero-state response*, driven by the input $u(t)$ with $bold(x)(0) = bold(0)$.
+
+=== Zero-Input Response
+
+With $u(t) = 0$ the state equation reduces to the homogeneous ODE $dot(bold(x)) = bold(A) bold(x)$. By analogy with the scalar case $dot(x) = a x$ whose solution is $x(t) = e^(a t) x(0)$, the solution of the vector equation is
+$
+  bold(x)(t) = e^(bold(A) t) bold(x)(0),
+$
+where $e^(bold(A) t)$ is the *matrix exponential*, a square matrix-valued function of time.
+
+=== The Matrix Exponential
+
+The matrix exponential $e^(bold(A) t)$ is defined by the power series
+$
+  e^(bold(A) t) = bold(I) + bold(A) t + frac((bold(A) t)^2, 2!) + frac((bold(A) t)^3, 3!) + dots = sum_(k=0)^infinity frac((bold(A) t)^k, k!),
+$
+which converges for every matrix $bold(A)$ and all $t$. The three properties needed in practice are:
+
++ $e^(bold(A) dot 0) = bold(I)$ (reduces to the identity at $t = 0$).
++ $frac(dif, dif t) e^(bold(A) t) = bold(A) e^(bold(A) t) = e^(bold(A) t) bold(A)$.
++ $e^(bold(A) t)$ is invertible for all $t$, with inverse $e^(-bold(A) t)$.
+
+#showybox(
+  frame: (
+    border-color: red.darken(50%),
+    title-color: red.darken(50%),
+    body-color: red.lighten(90%),
+  ),
+  title-style: (color: black, weight: "regular", align: left),
+  title: "Note",
+  [The matrix exponential $e^(bold(A) t)$ is also called the *state-transition matrix* and written $bold(Phi)(t)$. This notation emphasises its role: $bold(Phi)(t - t_0)$ transitions the state from time $t_0$ to time $t$. The property $bold(Phi)(t_2 - t_0) = bold(Phi)(t_2 - t_1) bold(Phi)(t_1 - t_0)$ is the semigroup (or composition) law.],
+)
+
+*Computing $e^(bold(A) t)$ via eigendecomposition.* If $bold(A)$ has $n$ linearly independent eigenvectors — which is guaranteed when its eigenvalues are distinct — write $bold(A) = bold(P) bold(Lambda) bold(P)^(-1)$, where $bold(Lambda) = "diag"(lambda_1, dots, lambda_n)$ collects the eigenvalues and the columns of $bold(P)$ are the corresponding eigenvectors. Then
+$
+  bold(A)^k = bold(P) bold(Lambda)^k bold(P)^(-1)
+  quad => quad
+  e^(bold(A) t) = bold(P) e^(bold(Lambda) t) bold(P)^(-1)
+                = bold(P) mat(delim: "[", e^(lambda_1 t), , ; , dots.down, ; , , e^(lambda_n t)) bold(P)^(-1).
+$
+This reduces the computation to scalar exponentials — one per eigenvalue.
+
+=== Complete Response
+
+For a non-zero input $u(t)$ the state equation is a first-order linear vector ODE. Variation of parameters (multiplying both sides by the integrating factor $e^(-bold(A) t)$ and integrating) gives the *complete response*
+$
+  bold(x)(t) = underbrace(e^(bold(A) t) bold(x)(0), "zero-input") + underbrace(integral_0^t e^(bold(A)(t - tau)) bold(B) u(tau) dif tau, "zero-state").
+$
+The zero-state term is a matrix convolution integral, entirely analogous to $y = h * u$ from Chapter 1, but now operating on vectors.
+
+=== Output Equation and Impulse Response
+
+Substituting the complete response into $y = bold(C) bold(x) + D u$ gives
+$
+  y(t) = bold(C) e^(bold(A) t) bold(x)(0) + integral_0^t bold(C) e^(bold(A)(t - tau)) bold(B) u(tau) dif tau + D u(t).
+$
+Setting $bold(x)(0) = bold(0)$ and $u(t) = delta(t)$ identifies the impulse response:
+$
+  h(t) = bold(C) e^(bold(A) t) bold(B) u_s(t) + D delta(t),
+$
+where $u_s(t)$ is the unit step ensuring $h(t) = 0$ for $t < 0$. This recovers $H(s) = cal(L){h(t)}$, and in Section 4 we will derive the same result algebraically.
+
+=== Worked Example: Step Response of a Second-Order System
+
+Find the output $y(t)$ of the system
+$
+  bold(A) = mat(delim: "[", 0, 1; -2, -3), quad bold(B) = mat(delim: "[", 0; 1), quad bold(C) = mat(delim: "[", 1, 0), quad D = 0
+$
+for a unit step input $u(t) = u_s(t)$ and zero initial conditions $bold(x)(0) = bold(0)$.
+
+*Step 1 — eigenvalues.* The characteristic polynomial is
+$
+  det(lambda bold(I) - bold(A)) = det mat(delim: "[", lambda, -1; 2, lambda + 3) = lambda^2 + 3 lambda + 2 = (lambda + 1)(lambda + 2).
+$
+Eigenvalues: $lambda_1 = -1$, $lambda_2 = -2$ (both in the open left-half plane — the system is stable).
+
+*Step 2 — eigenvectors.*
+- $lambda_1 = -1$: $(bold(A) + bold(I)) bold(v) = bold(0)$ gives $bold(v)_1 = mat(delim: "[", 1; -1)$.
+- $lambda_2 = -2$: $(bold(A) + 2 bold(I)) bold(v) = bold(0)$ gives $bold(v)_2 = mat(delim: "[", 1; -2)$.
+
+*Step 3 — modal matrix and its inverse.*
+$
+  bold(P) = mat(delim: "[", 1, 1; -1, -2), quad
+  bold(P)^(-1) = mat(delim: "[", 2, 1; -1, -1).
+$
+
+*Step 4 — matrix exponential.*
+$
+  e^(bold(A) t)
+  &= bold(P) mat(delim: "[", e^(-t), 0; 0, e^(-2t)) bold(P)^(-1) \
+  &= mat(delim: "[", 2e^(-t) - e^(-2t), e^(-t) - e^(-2t); 2e^(-2t) - 2e^(-t), 2e^(-2t) - e^(-t)).
+$
+*Check:* at $t = 0$ this gives $bold(I)$ as required.
+
+*Step 5 — zero-state response.*
+$
+  bold(x)(t) = integral_0^t e^(bold(A)(t - tau)) bold(B) dif tau.
+$
+Since $bold(B) = mat(delim: "[", 0; 1)$, the integrand selects the second column of $e^(bold(A)(t-tau))$:
+$
+  e^(bold(A)(t-tau)) bold(B) = mat(delim: "[", e^(-(t-tau)) - e^(-2(t-tau)); 2e^(-2(t-tau)) - e^(-(t-tau))).
+$
+Integrating component by component over $[0, t]$:
+$
+  x_1(t) &= integral_0^t [e^(-(t-tau)) - e^(-2(t-tau))] dif tau = (1 - e^(-t)) - frac(1 - e^(-2t), 2) = frac{1}{2} - e^(-t) + frac{e^(-2t)}{2}. \
+  x_2(t) &= integral_0^t [2e^(-2(t-tau)) - e^(-(t-tau))] dif tau = (1 - e^(-2t)) - (1 - e^(-t)) = e^(-t) - e^(-2t).
+$
+
+*Step 6 — output.*
+$
+  y(t) = bold(C) bold(x)(t) = x_1(t) = frac{1}{2} - e^(-t) + frac{1}{2} e^(-2t), quad t >= 0.
+$
+This matches the inverse Laplace transform of $Y(s) = H(s)\/s = 1\/(s(s+1)(s+2))$.
+
+#cetz.canvas({
+  import cetz.draw: *
+  import cetz-plot: *
+
+  plot.plot(
+    size: (12, 5),
+    x-tick-step: 1,
+    y-tick-step: 0.1,
+    y-min: -0.05,
+    y-max: 0.6,
+    x-min: 0,
+    x-max: 8,
+    x-label: $t$ + " (s)",
+    y-label: $y(t)$,
+    axis-style: "left",
+    {
+      plot.add(
+        domain: (0, 8),
+        t => (t, 0.5 - calc.exp(-t) + 0.5 * calc.exp(-2 * t)),
+        samples: 200,
+        label: [$y(t) = 1\/2 - e^(-t) + frac(1,2)e^(-2t)$],
+      )
+      plot.add(
+        ((0, 0.5), (8, 0.5)),
+        style: (stroke: (dash: "dashed", paint: gray)),
+        label: [steady-state $y(infinity) = 1\/2$],
+      )
+    },
+  )
+})
+
+The output rises monotonically from zero, settles to the steady-state value $y(infinity) = 1\/2$ (confirming $H(0) = bold(C)(-bold(A))^(-1)bold(B) = 1\/2$), and shows no overshoot because both poles are real and negative.
+
+== Transfer Function and State-Space Representations
+
+=== From State-Space to Transfer Function
+
+Taking the Laplace transform of the state equation with $bold(x)(0) = bold(0)$:
+$
+  s bold(X)(s) = bold(A) bold(X)(s) + bold(B) U(s)
+  quad => quad
+  (s bold(I) - bold(A)) bold(X)(s) = bold(B) U(s)
+  quad => quad
+  bold(X)(s) = (s bold(I) - bold(A))^(-1) bold(B) U(s).
+$
+Substituting into the transformed output equation $Y(s) = bold(C) bold(X)(s) + D U(s)$:
+$
+  Y(s) = [bold(C)(s bold(I) - bold(A))^(-1) bold(B) + D] U(s).
+$
+The transfer function is therefore
+$
+  H(s) = frac(Y(s), U(s)) = bold(C)(s bold(I) - bold(A))^(-1) bold(B) + D.
+$
+The matrix $(s bold(I) - bold(A))^(-1)$ is computed by Cramer's rule: its $( i, j)$ entry is the $(j, i)$ cofactor of $(s bold(I) - bold(A))$ divided by $det(s bold(I) - bold(A))$.
+
+#showybox(
+  frame: (
+    border-color: blue.darken(30%),
+    title-color: blue.darken(30%),
+    body-color: blue.lighten(90%),
+  ),
+  title-style: (color: black, weight: "regular", align: left),
+  title: "Key insight",
+  [The poles of $H(s)$ are exactly the eigenvalues of $bold(A)$: both are roots of $det(s bold(I) - bold(A)) = 0$, the characteristic polynomial of the system. This means the natural frequencies and stability of the system are completely determined by the spectrum of $bold(A)$, regardless of $bold(B)$, $bold(C)$, or $D$. Pole-zero cancellations in $H(s)$ occur when an eigenvalue is also a zero — a sign that some part of the system is not being driven or observed (see Section 6).],
+)
+
+=== From Transfer Function to State-Space
+
+Given $H(s) = frac(b_(n-1) s^(n-1) + dots + b_1 s + b_0, s^n + a_(n-1) s^(n-1) + dots + a_1 s + a_0)$ (proper, strictly proper if $b_(n-1) = 0$, so $D = 0$), there are infinitely many state-space realisations. Three canonical forms are particularly useful.
+
+==== Controllable Canonical Form (CCF)
+
+Place the denominator coefficients in the last row of $bold(A)$ and set:
+$
+  bold(A)_"ccf" = mat(delim: "[",
+    0, 1, 0, dots.h, 0;
+    0, 0, 1, dots.h, 0;
+    dots.v, dots.v, dots.v, dots.down, dots.v;
+    0, 0, 0, dots.h, 1;
+    -a_0, -a_1, -a_2, dots.h, -a_(n-1)
+  ), quad
+  bold(B)_"ccf" = mat(delim: "[", 0; 0; dots.v; 0; 1), quad
+  bold(C)_"ccf" = mat(delim: "[", b_0, b_1, dots.h, b_(n-1)), quad D = 0.
+$
+The name reflects a structural property: this form is always controllable (Section 6). It follows directly from the ODE-to-state-space conversion shown in Section 2.
+
+==== Observable Canonical Form (OCF)
+
+The OCF is the transpose dual of the CCF:
+$
+  bold(A)_"ocf" = bold(A)_"ccf"^TT, quad
+  bold(B)_"ocf" = bold(C)_"ccf"^TT, quad
+  bold(C)_"ocf" = bold(B)_"ccf"^TT, quad D = 0.
+$
+This form is always observable (Section 6). The two canonical forms have the same eigenvalues and the same transfer function but different internal structure.
+
+==== Diagonal (Modal) Form
+
+If $H(s)$ has $n$ distinct poles $p_1, p_2, dots, p_n$, expand by partial fractions:
+$
+  H(s) = sum_(k=1)^n frac(r_k, s - p_k), quad r_k = lim_(s -> p_k) (s - p_k) H(s).
+$
+Each term $r_k\/(s - p_k)$ realises as a first-order system $dot(x)_k = p_k x_k + r_k u$, $y_k = x_k$. The parallel combination gives:
+$
+  bold(A)_"diag" = mat(delim: "[", p_1, , ; , dots.down, ; , , p_n), quad
+  bold(B)_"diag" = mat(delim: "[", 1; dots.v; 1), quad
+  bold(C)_"diag" = mat(delim: "[", r_1, r_2, dots.h, r_n), quad D = 0.
+$
+The diagonal $bold(A)$ means the state equations are decoupled — each mode $x_k(t) = r_k e^(p_k t)$ evolves independently.
+
+=== Worked Examples
+
+*Example 1 — CCF realisation.* Find the controllable canonical form for
+$
+  H(s) = frac(s + 3, s^2 + 3s + 2).
+$
+Denominator coefficients: $a_0 = 2$, $a_1 = 3$. Numerator coefficients: $b_0 = 3$, $b_1 = 1$.
+$
+  bold(A) = mat(delim: "[", 0, 1; -2, -3), quad
+  bold(B) = mat(delim: "[", 0; 1), quad
+  bold(C) = mat(delim: "[", 3, 1), quad D = 0.
+$
+
+*Example 2 — round-trip verification.* Starting from the CCF above, confirm that $bold(C)(s bold(I) - bold(A))^(-1) bold(B) = H(s)$.
+$
+  s bold(I) - bold(A) = mat(delim: "[", s, -1; 2, s + 3),
+  quad
+  (s bold(I) - bold(A))^(-1) = frac(1, s^2 + 3s + 2) mat(delim: "[", s + 3, 1; -2, s).
+$
+$
+  (s bold(I) - bold(A))^(-1) bold(B)
+  = frac(1, s^2+3s+2) mat(delim: "[", s+3, 1; -2, s) mat(delim: "[", 0; 1)
+  = frac(1, s^2+3s+2) mat(delim: "[", 1; s).
+$
+$
+  bold(C)(s bold(I) - bold(A))^(-1) bold(B)
+  = mat(delim: "[", 3, 1) frac(1, s^2+3s+2) mat(delim: "[", 1; s)
+  = frac(3 + s, s^2+3s+2) = H(s). quad checkmark
+$
+
+*Example 3 — diagonal form.* Factor $s^2 + 3s + 2 = (s+1)(s+2)$, so $p_1 = -1$, $p_2 = -2$. Residues:
+$
+  r_1 = lim_(s -> -1) frac{(s+1)(s+3)}{(s+1)(s+2)} = frac{2}{1} = 2,
+  quad
+  r_2 = lim_(s -> -2) frac{(s+2)(s+3)}{(s+1)(s+2)} = frac{1}{-1} = -1.
+$
+$
+  bold(A) = mat(delim: "[", -1, 0; 0, -2), quad
+  bold(B) = mat(delim: "[", 1; 1), quad
+  bold(C) = mat(delim: "[", 2, -1), quad D = 0.
+$
+All three realisations share the poles $-1$ and $-2$ but differ in their internal coupling.
+
+== Linear Transformation of the State Vector
+
+The three realisations in Section 4 all represent the same transfer function yet have different $bold(A)$, $bold(B)$, $bold(C)$ matrices. This section makes precise the relationship between them: any two state-space realisations of the same $H(s)$ are connected by an invertible *similarity transform*.
+
+=== Similarity Transform
+
+Let $overline(bold(x)) = bold(P) bold(x)$ where $bold(P)$ is an invertible $n times n$ matrix. Substituting $bold(x) = bold(P)^(-1) overline(bold(x))$ into the state equation:
+$
+  bold(P)^(-1) dot(overline(bold(x))) = bold(A) bold(P)^(-1) overline(bold(x)) + bold(B) u
+  quad => quad
+  dot(overline(bold(x))) = underbrace(bold(P) bold(A) bold(P)^(-1), overline(bold(A))) overline(bold(x)) + underbrace(bold(P) bold(B), overline(bold(B))) u.
+$
+The output equation becomes $y = bold(C) bold(P)^(-1) overline(bold(x)) + D u$, so $overline(bold(C)) = bold(C) bold(P)^(-1)$. Summarising, the transformed quadruple is
+$
+  overline(bold(A)) = bold(P) bold(A) bold(P)^(-1), quad
+  overline(bold(B)) = bold(P) bold(B), quad
+  overline(bold(C)) = bold(C) bold(P)^(-1), quad
+  overline(D) = D.
+$
+
+=== Invariants Under Similarity
+
+The following quantities are unchanged by any similarity transform (they are *similarity invariants*):
+
+- *Eigenvalues* of $bold(A)$: $"spec"(overline(bold(A))) = "spec"(bold(P) bold(A) bold(P)^(-1)) = "spec"(bold(A))$.
+- *Characteristic polynomial*: $det(s bold(I) - overline(bold(A))) = det(s bold(I) - bold(A))$.
+- *Trace*: $"tr"(overline(bold(A))) = "tr"(bold(A)) = sum_k lambda_k$.
+- *Determinant*: $det(overline(bold(A))) = det(bold(A)) = product_k lambda_k$.
+- *Transfer function*: $overline(bold(C))(s bold(I) - overline(bold(A)))^(-1) overline(bold(B)) + overline(D) = H(s)$.
+
+The last invariant is the most important: a similarity transform changes the state basis without changing the input-output behaviour. The choice of $bold(P)$ is therefore a matter of mathematical convenience, not physical content.
+
+=== Diagonalisation
+
+If $bold(A)$ has $n$ distinct eigenvalues $lambda_1, dots, lambda_n$ with eigenvectors $bold(v)_1, dots, bold(v)_n$, choose $bold(P) = mat(delim: "[", bold(v)_1, bold(v)_2, dots.h, bold(v)_n)^(-1)$ (the inverse of the modal matrix). Then
+$
+  overline(bold(A)) = bold(Lambda) = mat(delim: "[", lambda_1, , ; , dots.down, ; , , lambda_n),
+$
+a diagonal matrix. The transformed state equations $dot(overline(bold(x)))_k = lambda_k overline(x)_k + overline(B)_k u$ are completely *decoupled* — each mode evolves independently according to its own eigenvalue. This is the diagonal (modal) realisation from Section 4, now seen as a similarity transform of the original system.
+
+The matrix exponential in the new basis is trivially $e^(bold(Lambda) t) = "diag"(e^(lambda_1 t), dots, e^(lambda_n t))$, giving the inverse relation
+$
+  e^(bold(A) t) = bold(P)^(-1) e^(bold(Lambda) t) bold(P).
+$
+This is precisely the eigendecomposition method for computing $e^(bold(A) t)$ introduced in Section 3.
+
+=== Worked Example: Diagonalising the Series RLC System
+
+Take the series RLC system from Section 2 with $R = 3\, "H"$ Ω, $L = 1$ H, $C = 1$ F (so the matrices are those of the step-response example):
+$
+  bold(A) = mat(delim: "[", 0, 1; -2, -3), quad bold(B) = mat(delim: "[", 0; 1), quad bold(C) = mat(delim: "[", 1, 0).
+$
+From the eigenvalue analysis, $lambda_1 = -1$, $lambda_2 = -2$ with eigenvectors $bold(v)_1 = mat(delim: "[", 1; -1)$ and $bold(v)_2 = mat(delim: "[", 1; -2)$. The modal matrix and its inverse are
+$
+  bold(M) = mat(delim: "[", 1, 1; -1, -2), quad bold(M)^(-1) = mat(delim: "[", 2, 1; -1, -1).
+$
+Choose $bold(P) = bold(M)^(-1)$ so that $bold(P) bold(A) bold(P)^(-1) = bold(Lambda)$. The transformed matrices are
+$
+  overline(bold(A)) = mat(delim: "[", -1, 0; 0, -2), quad
+  overline(bold(B)) = bold(P) bold(B) = mat(delim: "[", 2, 1; -1, -1) mat(delim: "[", 0; 1) = mat(delim: "[", 1; -1), quad
+  overline(bold(C)) = bold(C) bold(P)^(-1) = mat(delim: "[", 1, 0) mat(delim: "[", 1, 1; -1, -2) = mat(delim: "[", 1, 1).
+$
+Verify: $overline(bold(C))(s bold(I) - overline(bold(A)))^(-1) overline(bold(B)) = mat(delim: "[", 1, 1) mat(delim: "[", 1\/(s+1), 0; 0, 1\/(s+2)) mat(delim: "[", 1; -1) = frac(1, s+1) - frac(1, s+2) = frac(1, (s+1)(s+2)) = H(s). checkmark$
+
+The zero-input response in the modal basis is $overline(bold(x))(t) = mat(delim: "[", e^(-t), 0; 0, e^(-2t)) overline(bold(x))(0)$, which transforms back to $bold(x)(t) = bold(M) overline(bold(x))(t)$, reproducing the result from Section 3.
+
+== Controllability and Observability
+
+Every state-space system has two fundamental structural properties that ask complementary questions: *Can we drive the system to any desired state?* and *Can we determine the system's initial state from its outputs?* The answers, which depend only on the matrix pairs $(bold(A), bold(B))$ and $(bold(A), bold(C))$ respectively, determine what can and cannot be achieved by feedback control and state estimation.
+
+=== Controllability
+
+*Definition.* The system $(bold(A), bold(B), bold(C), D)$ is *completely state controllable* if for every initial state $bold(x)(0) = bold(x)_0$ and every desired final state $bold(x)_f$, there exists a finite time $T > 0$ and a piecewise continuous input $u(t)$, $0 <= t <= T$, that drives $bold(x)(T) = bold(x)_f$.
+
+Intuitively, controllability means the input $u(t)$ has access to every mode of the system. A mode that cannot be excited by $u$ — perhaps because it is in a sub-circuit that has no connection to the input — is *uncontrollable*.
+
+*Controllability matrix.* The system is completely controllable if and only if the $n times n$ *controllability matrix*
+$
+  cal(C) = mat(delim: "[", bold(B), bold(A) bold(B), bold(A)^2 bold(B), dots.h, bold(A)^(n-1) bold(B))
+$
+has full rank, i.e. $"rank"(cal(C)) = n$.
+
+The columns of $cal(C)$ span the set of states reachable from the origin in finite time. If $"rank"(cal(C)) < n$, a subspace of dimension $n - "rank"(cal(C))$ is unreachable and no input can ever drive the state into it.
+
+=== Observability
+
+*Definition.* The system is *completely observable* if the initial state $bold(x)(0)$ can be uniquely determined from the output $y(t)$ measured over a finite interval $[0, T]$, given the input $u(t)$.
+
+Intuitively, observability means every mode of the system affects the output. A mode that decays in $bold(x)$ but produces zero contribution to $y$ — perhaps because it lies in the null space of $bold(C)$ — is *unobservable*: the output gives no information about it.
+
+*Observability matrix.* The system is completely observable if and only if the $n times n$ *observability matrix*
+$
+  cal(O) = mat(delim: "[", bold(C); bold(C) bold(A); bold(C) bold(A)^2; dots.v; bold(C) bold(A)^(n-1))
+$
+has full rank, i.e. $"rank"(cal(O)) = n$.
+
+The rows of $cal(O)$ span the set of initial conditions that can be distinguished by observations of $y(t)$. If $"rank"(cal(O)) < n$, there exist non-zero initial conditions that produce $y(t) equiv 0$ for all $t$ and all inputs — they are hidden from the output.
+
+=== The Duality Principle
+
+#showybox(
+  frame: (
+    border-color: blue.darken(30%),
+    title-color: blue.darken(30%),
+    body-color: blue.lighten(90%),
+  ),
+  title-style: (color: black, weight: "regular", align: left),
+  title: "Key insight",
+  [Controllability of $(bold(A), bold(B), bold(C), D)$ is equivalent to observability of its *dual system* $(bold(A)^TT, bold(C)^TT, bold(B)^TT, D)$. Formally: $(bold(A), bold(B))$ is a controllable pair if and only if $(bold(A)^TT, bold(B)^TT)$ is an observable pair. This duality means that results for one property can always be translated into results for the other by transposition, halving the number of theorems to prove.],
+)
+
+The duality can be seen directly from the matrices: $cal(C)(bold(A), bold(B)) = cal(O)(bold(A)^TT, bold(B)^TT)^TT$, so their ranks are equal.
+
+=== Canonical Forms and Structural Properties
+
+- The *controllable canonical form* (CCF) is always controllable: $"rank"(cal(C)_"ccf") = n$ for any choice of coefficients.
+- The *observable canonical form* (OCF) is always observable: $"rank"(cal(O)_"ocf") = n$ for any choice of coefficients.
+- *Pole-zero cancellation* in $H(s)$ is the signature of a mode that is either uncontrollable or unobservable (or both). When a pole $p_k$ is cancelled by a zero at the same location, the corresponding mode contributes nothing to the transfer function — it is hidden from the input-output picture but still present in the internal dynamics.
+
+=== Worked Example: Controllability of the Series RLC System
+
+Use $bold(A) = mat(delim: "[", 0, 1; -2, -3)$ and $bold(B) = mat(delim: "[", 0; 1)$ from the running example.
+$
+  cal(C) = mat(delim: "[", bold(B), bold(A) bold(B))
+         = mat(delim: "[", 0, 1; 1, -3).
+$
+$det(cal(C)) = 0 dot (-3) - 1 dot 1 = -1 eq.not 0$, so $"rank"(cal(C)) = 2 = n$. The system is completely controllable: the voltage source can drive both the capacitor voltage and the inductor current to any desired values.
+
+Check observability with $bold(C) = mat(delim: "[", 1, 0)$:
+$
+  cal(O) = mat(delim: "[", bold(C); bold(C) bold(A))
+         = mat(delim: "[", 1, 0; 0, 1).
+$
+$det(cal(O)) = 1 eq.not 0$, so $"rank"(cal(O)) = 2 = n$. The system is completely observable: measuring $v_C$ alone is sufficient to recover both state variables, because $bold(C) bold(A)$ extracts the inductor current from the derivative of $v_C$.
+
+=== Worked Example: A Hidden Unobservable Mode
+
+Consider the system
+$
+  bold(A) = mat(delim: "[", -1, 0; 0, -1), quad bold(B) = mat(delim: "[", 1; 1), quad bold(C) = mat(delim: "[", 1, 1), quad D = 0.
+$
+Both modes have eigenvalue $-1$. The output is $y = x_1 + x_2$. If the initial condition is $bold(x)(0) = mat(delim: "[", alpha; -alpha)$ for any $alpha eq.not 0$, then $y(t) = x_1(t) + x_2(t) = alpha e^(-t) - alpha e^(-t) = 0$ for all $t$ — the system appears completely at rest from the output, even though $bold(x)(0) eq.not bold(0)$.
+
+The observability matrix confirms this:
+$
+  cal(O) = mat(delim: "[", bold(C); bold(C) bold(A)) = mat(delim: "[", 1, 1; -1, -1).
+$
+$det(cal(O)) = (1)(-1) - (1)(-1) = 0$, so $"rank"(cal(O)) = 1 < 2 = n$. The null space of $cal(O)$ is $"span"{mat(delim: "[", 1; -1)}$ — precisely the family of initial conditions that cannot be distinguished from zero.
+
+The transfer function $H(s) = bold(C)(s bold(I) - bold(A))^(-1) bold(B) = (1/(s+1) + 1/(s+1)) = 2\/(s+1)$ has only a single pole and is of order 1, not 2 — the unobservable mode at $s = -1$ has been cancelled. The state-space description carries more information than the transfer function in this case.
+
+== Summary
+
+The key results of this chapter are collected below.
+
+#table(
+  columns: (auto, 1fr),
+  inset: 8pt,
+  align: (left, left),
+  table.header([*Concept*], [*Result*]),
+  [Standard form],          [$dot(bold(x)) = bold(A) bold(x) + bold(B) u$; $quad y = bold(C) bold(x) + D u$],
+  [State variables],        [One per independent energy-storage element ($v_C$, $i_L$)],
+  [Zero-input response],    [$bold(x)(t) = e^(bold(A) t) bold(x)(0)$; state-transition matrix $bold(Phi)(t) = e^(bold(A) t)$],
+  [Matrix exponential],     [$e^(bold(A) t) = bold(P)^(-1) e^(bold(Lambda) t) bold(P)$ via eigendecomposition],
+  [Complete response],      [$bold(x)(t) = e^(bold(A) t) bold(x)(0) + integral_0^t e^(bold(A)(t-tau)) bold(B) u(tau) dif tau$],
+  [Impulse response],       [$h(t) = bold(C) e^(bold(A) t) bold(B) u_s(t) + D delta(t)$],
+  [Transfer function],      [$H(s) = bold(C)(s bold(I) - bold(A))^(-1) bold(B) + D$],
+  [Poles],                  [Eigenvalues of $bold(A)$: roots of $det(s bold(I) - bold(A)) = 0$],
+  [Similarity transform],   [$overline(bold(A)) = bold(P) bold(A) bold(P)^(-1)$, $overline(bold(B)) = bold(P) bold(B)$, $overline(bold(C)) = bold(C) bold(P)^(-1)$; $H(s)$ unchanged],
+  [Controllability],        [$"rank"(cal(C)) = "rank" mat(delim: "[", bold(B), bold(A) bold(B), dots.h, bold(A)^(n-1) bold(B)) = n$],
+  [Observability],          [$"rank"(cal(O)) = "rank" mat(delim: "[", bold(C); bold(C) bold(A); dots.v; bold(C) bold(A)^(n-1)) = n$],
+  [Duality],                [$(bold(A), bold(B))$ controllable $<=>$ $(bold(A)^TT, bold(B)^TT)$ observable],
+)
+
+#showybox(
+  frame: (
+    border-color: blue.darken(30%),
+    title-color: blue.darken(30%),
+    body-color: blue.lighten(90%),
+  ),
+  title-style: (color: black, weight: "regular", align: left),
+  title: "Key insight",
+  [State-space analysis is the bridge between the classical frequency-domain methods of Chapters 2–5 and modern control theory. The transfer function $H(s)$ tells us how a system responds to sinusoids; the state-space model tells us how it responds to anything, starting from any initial condition, and whether that response can be shaped by feedback. Controllability and observability are the prerequisites for the two fundamental design problems of modern control: *state feedback* (place the poles of $bold(A) + bold(B) bold(K)$ by choosing gain matrix $bold(K)$) and *state estimation* (design a Luenberger observer to reconstruct $bold(x)(t)$ from $y(t)$ when the state cannot be measured directly).],
+)
